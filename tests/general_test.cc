@@ -9,6 +9,8 @@ int main(int argc, char** argv) {
 
     Tokenizer t{R"(
         g01X21.2y300.Z.05A30(12 34); ab
+        #<var1> = 1
+        IF [11]
     )"};
 
     try {

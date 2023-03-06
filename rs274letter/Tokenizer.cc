@@ -40,18 +40,35 @@ void Tokenizer::init(std::string string) {
 
 static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_vec = {
     // NULL Tokens
-    XX(R"(^\s+)", "NULL"),
-    XX(R"(^\(.*\))", "COMMENT()"),
-    XX(R"(^;.*)", "COMMENT;"),
-    XX(R"(^\n)", "RETURN"),
+    XX(R"(^\s+)", "NULL"),          // spaces
+    XX(R"(^\(.*\))", "COMMENT()"),  // comment like : ( xxx )
+    XX(R"(^;.*)", "COMMENT;"),      // comment like : ( ; abc )
+    XX(R"(^\n)", "RETURN"),         // return, designed to use for line number calculation // TODO
 
-    XX(R"(^[gG])", "G"),
-    XX(R"(^[mM])", "M"),
-    XX(R"(^[eE])", "E"),
+    // Commands
+    XX(R"(^[gG])", "G"),            // G Code Identifier
+    XX(R"(^[mM])", "M"),            // M Code Identifier
+    XX(R"(^[eE])", "E"),            // E Code Identifier
     // XX(R"(^[wW])", "W"),
 
-    XX(R"(^[xXyYzZaAbBcC])", "COORDINATE"),
+    // Parameters
+    XX(R"(^[xXyYzZaAbBcC])", "COORDINATE"), // Coordinate Identifier (XYZABC)
+    // XX(R"(^[pP])", "P"),            // P Parameter Identifier
+    // XX(R"(^[qQ])", "Q"),            // Q Parameter Identifier
 
+    // Variable Operations
+    XX(R"(^#)", "#"),               // #, variable pre Identifier
+    XX(R"(^=)", "ASSIGN"),          // =, assignment operator =
+    XX(R"(^<\w+>)", "VAR_NAME"),    // variable name <_var_name_>
+
+    // Binary Expression
+    XX(R"(^\[)", "["),
+    XX(R"(^\])", "]"),
+
+    // Control Flow
+    XX(R"(^if\b|^IF\b)", "IF"),  
+
+    // Numerical Literals
     XX(R"(^\d+\.\d*|^\d*\.\d+)", "DOUBLE"), // DOUBLE should be higher than INTEGER, support 01.00 / 01. / .01
     XX(R"(^\d+)", "INTEGER"),
 
