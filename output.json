@@ -1,0 +1,120 @@
+{
+  "body": [
+    {
+      "body": [
+        {
+          "letter": "g",
+          "number": {
+            "type": "integerNumericLiteral",
+            "value": 1
+          },
+          "type": "commandNumberGroup"
+        },
+        {
+          "letter": "x",
+          "number": {
+            "left": {
+              "left": {
+                "type": "integerNumericLiteral",
+                "value": 0
+              },
+              "operator": "+",
+              "right": {
+                "type": "integerNumericLiteral",
+                "value": 30
+              },
+              "type": "binaryExpression"
+            },
+            "operator": "-",
+            "right": {
+              "type": "integerNumericLiteral",
+              "value": 2
+            },
+            "type": "binaryExpression"
+          },
+          "type": "commandNumberGroup"
+        },
+        {
+          "letter": "y",
+          "number": {
+            "left": {
+              "type": "integerNumericLiteral",
+              "value": 0
+            },
+            "operator": "-",
+            "right": {
+              "left": {
+                "type": "doubleNumericLiteral",
+                "value": 2.900000
+              },
+              "operator": "+",
+              "right": {
+                "index": 2,
+                "type": "numberIndexVariable"
+              },
+              "type": "binaryExpression"
+            },
+            "type": "binaryExpression"
+          },
+          "type": "commandNumberGroup"
+        }
+      ],
+      "type": "commandStatement"
+    },
+    {
+      "body": {
+        "left": {
+          "index": 1,
+          "type": "numberIndexVariable"
+        },
+        "operator": "=",
+        "right": {
+          "left": {
+            "index": 2,
+            "type": "numberIndexVariable"
+          },
+          "operator": "-",
+          "right": {
+            "type": "integerNumericLiteral",
+            "value": 2
+          },
+          "type": "binaryExpression"
+        },
+        "type": "assignmentExpression"
+      },
+      "type": "expressionStatement"
+    },
+    {
+      "body": {
+        "left": {
+          "index": 2,
+          "type": "numberIndexVariable"
+        },
+        "operator": "=",
+        "right": {
+          "left": {
+            "type": "integerNumericLiteral",
+            "value": 2
+          },
+          "operator": "+",
+          "right": {
+            "left": {
+              "index": 3,
+              "type": "numberIndexVariable"
+            },
+            "operator": "*",
+            "right": {
+              "type": "doubleNumericLiteral",
+              "value": 1.200000
+            },
+            "type": "binaryExpression"
+          },
+          "type": "binaryExpression"
+        },
+        "type": "assignmentExpression"
+      },
+      "type": "expressionStatement"
+    }
+  ],
+  "type": "program"
+}
