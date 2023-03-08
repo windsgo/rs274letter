@@ -112,13 +112,51 @@ AstObject Parser::commandNumberGroup()
     // transform letter to lower case
     std::transform(letter.begin(), letter.end(), letter.begin(), ::tolower);
     
+    // number or sth (which can be calced as a number)
+    AstObject number;
+    
+    // get the lookahead type, valid: ASSIGN_OPERATOR [ DOUBLE INTEGER
+    auto&& next_type = Tokenizer::GetTokenType(this->_lookahead);
+
     // eat the following number to construct a command-number group
-    auto&& number = this->expression();
+    if (next_type == "ADDITIVE_OPERATOR") {
+        auto&& op = this->eat("ADDITIVE_OPERATOR");
+
+        // the next token_type after ADDITIVE_OPERATOR
+        auto&& next_next_type = Tokenizer::GetTokenType(this->_lookahead);
+        auto&& zero = AstObject{
+            {"type", "integerNumericLiteral"},
+            {"value", 0}
+        };
+
+        // right hand side of "ADDITIVE_OPERATOR"
+        AstObject right;
+        if (next_next_type == "[") {
+            right = this->parenthesizedExpression();
+        } else if (next_next_type == "#") {
+            right = this->variable();
+        } else {
+            right = this->numericLiteral();
+        }
+        
+        number = AstObject{
+            {"type", "binaryExpression"},
+            {"operator", op},
+            {"left", zero},
+            {"right", std::move(right)}
+        };
+    } else if (next_type == "[") {
+        number = this->parenthesizedExpression();
+    } else if (next_type == "INTEGER" || next_type == "DOUBLE") {
+        number = this->numericLiteral();
+    } else {
+        throw Exception("Unexpected token after LETTER: " + this->_lookahead["value"].as_string() + ", type:" + next_type);
+    }
 
     return AstObject{
         {"type", "commandNumberGroup"},
         {"letter", letter},
-        {"number", number}
+        {"number", std::move(number)}
     };
 }
 

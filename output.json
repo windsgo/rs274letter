@@ -14,21 +14,13 @@
           "letter": "x",
           "number": {
             "left": {
-              "left": {
-                "type": "integerNumericLiteral",
-                "value": 0
-              },
-              "operator": "+",
-              "right": {
-                "type": "integerNumericLiteral",
-                "value": 30
-              },
-              "type": "binaryExpression"
+              "type": "integerNumericLiteral",
+              "value": 0
             },
             "operator": "-",
             "right": {
               "type": "integerNumericLiteral",
-              "value": 2
+              "value": 30
             },
             "type": "binaryExpression"
           },
@@ -55,6 +47,30 @@
               "type": "binaryExpression"
             },
             "type": "binaryExpression"
+          },
+          "type": "commandNumberGroup"
+        },
+        {
+          "letter": "z",
+          "number": {
+            "left": {
+              "type": "integerNumericLiteral",
+              "value": 0
+            },
+            "operator": "+",
+            "right": {
+              "index": "<var>",
+              "type": "nameIndexVariable"
+            },
+            "type": "binaryExpression"
+          },
+          "type": "commandNumberGroup"
+        },
+        {
+          "letter": "a",
+          "number": {
+            "type": "integerNumericLiteral",
+            "value": 123
           },
           "type": "commandNumberGroup"
         }
@@ -104,8 +120,16 @@
             },
             "operator": "*",
             "right": {
-              "type": "doubleNumericLiteral",
-              "value": 1.200000
+              "left": {
+                "type": "doubleNumericLiteral",
+                "value": 1.200000
+              },
+              "operator": "+",
+              "right": {
+                "index": "<aa>",
+                "type": "nameIndexVariable"
+              },
+              "type": "binaryExpression"
             },
             "type": "binaryExpression"
           },

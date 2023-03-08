@@ -12,9 +12,9 @@ using namespace rs274letter;
 int main(int argc, char** argv) {
 
     std::string code = 
-    R"( G1 x+30-2 Y-[2.9+#2]
+    R"( G1 x-30 Y-[2.9+#2] Z+#<var> A123
         #1=#2-2
-        #2=2+#3*1.2
+        #2=2+#3*[1.2+#<aa>]
     )";
 
     auto t = std::make_unique<Tokenizer>(code.cbegin(), code.cend());
