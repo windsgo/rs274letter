@@ -56,8 +56,10 @@ AstObject Parser::statement()
         return this->emptyStatement();
     } else if (lookahead_type == "LETTER") {
         return this->commandStatement();
+    } else if (lookahead_type == "O") {
+        return this->oCommandStatement();
     } else { // TODO
-        return this->expressionStatement();
+        return this->expressionStatement(); 
     }
 }
 
@@ -77,18 +79,65 @@ AstObject Parser::commandStatement()
 
     return AstObject{
         {"type", "commandStatement"},
-        {"body", command_number_group_list} // body is an array
+        {"commands", command_number_group_list} // body is an array
     };
 }
 
 AstObject Parser::expressionStatement()
 {
-    auto&& expression = this->expression();
+    auto&& expression = this->expression(true); // must be assignment
     this->eat("RTN");
 
     return AstObject{
         {"type", "expressionStatement"},
-        {"body", expression}
+        {"expression", expression}
+    };
+}
+
+AstObject Parser::oCommandStatement()
+{
+    auto&& o_command_start = this->oCommand();
+
+    auto&& next_type_after_o = Tokenizer::GetTokenType(this->_lookahead);
+
+    if (next_type_after_o == "call") {
+        return this->oCallStatement(o_command_start);
+    } else if (next_type_after_o == "if") {
+        return this->oIfStatement(o_command_start);
+    } else {
+        throw Exception("Unexpected token type after oCommand: " + next_type_after_o);
+    }
+}
+
+AstObject Parser::oCallStatement(const AstObject &o_command_start)
+{
+    return AstObject();
+}
+
+AstObject Parser::oIfStatement(const AstObject &o_command_start)
+{
+    this->eat("if");
+    auto&& test = this->parenthesizedExpression();
+    this->eat("RTN");
+
+    auto&& conse = this->statement();
+
+    auto&& o_command_second = this->oCommand();
+    if (o_command_second != o_command_start) {
+        std::stringstream ss;
+        ss << "Different O command index, first: " 
+           << o_command_start.at("index").to_string()
+           << ", second: "
+           << o_command_second.at("index").to_string();
+        throw Exception(ss.str());
+    }
+    this->eat("endif");
+    this->eat("RTN");
+
+    return AstObject{
+        {"type", "oIfStatement"},
+        {"test", test},
+        {"conse", conse}
     };
 }
 
@@ -113,45 +162,7 @@ AstObject Parser::commandNumberGroup()
     std::transform(letter.begin(), letter.end(), letter.begin(), ::tolower);
     
     // number or sth (which can be calced as a number)
-    AstObject number;
-    
-    // get the lookahead type, valid: ASSIGN_OPERATOR [ DOUBLE INTEGER
-    auto&& next_type = Tokenizer::GetTokenType(this->_lookahead);
-
-    // eat the following number to construct a command-number group
-    if (next_type == "ADDITIVE_OPERATOR") {
-        auto&& op = this->eat("ADDITIVE_OPERATOR");
-
-        // the next token_type after ADDITIVE_OPERATOR
-        auto&& next_next_type = Tokenizer::GetTokenType(this->_lookahead);
-        auto&& zero = AstObject{
-            {"type", "integerNumericLiteral"},
-            {"value", 0}
-        };
-
-        // right hand side of "ADDITIVE_OPERATOR"
-        AstObject right;
-        if (next_next_type == "[") {
-            right = this->parenthesizedExpression();
-        } else if (next_next_type == "#") {
-            right = this->variable();
-        } else {
-            right = this->numericLiteral();
-        }
-        
-        number = AstObject{
-            {"type", "binaryExpression"},
-            {"operator", op},
-            {"left", zero},
-            {"right", std::move(right)}
-        };
-    } else if (next_type == "[") {
-        number = this->parenthesizedExpression();
-    } else if (next_type == "INTEGER" || next_type == "DOUBLE") {
-        number = this->numericLiteral();
-    } else {
-        throw Exception("Unexpected token after LETTER: " + this->_lookahead["value"].as_string() + ", type:" + next_type);
-    }
+    auto&& number = this->primaryExpression();
 
     return AstObject{
         {"type", "commandNumberGroup"},
@@ -160,28 +171,52 @@ AstObject Parser::commandNumberGroup()
     };
 }
 
-AstObject Parser::expression()
+AstObject Parser::oCommand()
 {
-    return this->assignmentExpression();
+    this->eat("O");
+    auto&& type = Tokenizer::GetTokenType(this->_lookahead);
+
+    if (type == "VAR_NAME") {
+        // #<_var_name_>
+        return AstObject{
+            {"type", "nameIndexOCommand"},
+            {"index", this->nameIndex()}
+        };
+    } else {
+        return AstObject{
+            {"type", "numberIndexOCommand"},
+            {"index", this->numberIndex()}
+        };
+    }
 }
 
-AstObject Parser::assignmentExpression()
+AstObject Parser::expression(bool must_be_assignment/* = false*/)
+{
+    return this->assignmentExpression(must_be_assignment);
+}
+
+AstObject Parser::assignmentExpression(bool must_be_assignment/* = false*/)
 {
     auto&& left = this->additiveExpression();
 
     if (!this->IsAssignmentOperator(this->_lookahead)) {
+        // if must_be_assignment, throw exception here
+        if (must_be_assignment) {
+            throw Exception("Must be assignment expression here, but no assignment operator,"
+                " next token is:" + this->_lookahead.to_string());
+        }
+        
         // if next token is not an assign operator
         // then this `assignmentExpression` is only an `additiveExpression`
-        // May need to throw here, because this makes no sense, but now debug. // TODO
         return left;
-    }
+    } 
 
     // this `assignmentExpression` is EXACTLY an assignmentExpression
     return AstObject{
         {"type", "assignmentExpression"},
         {"operator", this->assignmentOperator()},
         {"left", this->IsValidAssignmentTarget(left)}, // The additiveExpression may not be a valid `leftHandSideExpresion`
-        {"right", this->assignmentExpression()}
+        {"right", this->primaryExpression()} // need to be a primary expression in rs274
     };
 }
 
@@ -192,19 +227,9 @@ TokenValue Parser::assignmentOperator()
 
 AstObject Parser::additiveExpression()
 {   
-    AstObject left;
-    if (Tokenizer::GetTokenType(this->_lookahead) == "ADDITIVE_OPERATOR") {
-        // the lookahead is "+" or "-"
-        // which means this additive expression omitted the first number 0
-        // such as "-5" is parsed as an additive expression as (0 - 5)
-        left = AstObject{
-            {"type", "integerNumericLiteral"},
-            {"value", 0}
-        };
-    } else {
-        // an `additiveExpression` may just be a `multiplicativeExpression`
-        left = this->multiplicativeExpression();
-    }
+    // an `additiveExpression` may just be a `multiplicativeExpression`
+    auto&& left = this->multiplicativeExpression();
+
     // or have an ADDITIVE_OPERATOR with right-hand-side-multiplicativeExpression
     // while loop to expand nested additive expression
     // e.g. 1 + 2 + 3 would be -> left:1, op:+, right:2 -> left:(1 + 2), op:+, right:3, to make this expansion
@@ -251,11 +276,25 @@ AstObject Parser::multiplicativeExpression()
     return left;
 }
 
-AstObject Parser::primaryExpression()
+AstObject Parser::primaryExpression(bool can_have_forward_additive_op/* = true*/)
 {
     auto&& type = Tokenizer::GetTokenType(this->_lookahead);
     
-    if( type == "INTEGER" || type == "DOUBLE" ) {
+    if (type == "ADDITIVE_OPERATOR" && can_have_forward_additive_op) {
+        // 一元运算符，正、负，识别为additive，包装为一个省略0的加减法表达式
+        auto zero = AstObject{
+            {"type", "integerNumericLiteral"},
+            {"value", 0}
+        };
+        auto&& op = this->eat("ADDITIVE_OPERATOR");
+
+        return AstObject{
+            {"type", "binaryExpression"},
+            {"operator", op},
+            {"left", std::move(zero)},
+            {"right", this->primaryExpression(false)}
+        };
+    } else if ( type == "INTEGER" || type == "DOUBLE" ) {
         return this->numericLiteral();
     } else if (type == "[") {
         return this->parenthesizedExpression();
@@ -287,25 +326,43 @@ AstObject Parser::variable()
 
     auto&& type = Tokenizer::GetTokenType(this->_lookahead);
 
-    if (type == "INTEGER") {
-        return AstObject{
-            {"type", "numberIndexVariable"},
-            {"index", std::stoi(this->eat("INTEGER"))}
-        };       
-    } else if (type == "VAR_NAME") {
+    if (type == "VAR_NAME") {
+        // #<_var_name_>
         return AstObject{
             {"type", "nameIndexVariable"},
-            {"index", this->eat("VAR_NAME")}
-        };       
+            {"index", this->nameIndex()}
+        };
+    } else {
+        return AstObject{
+            {"type", "numberIndexVariable"},
+            {"index", this->numberIndex()}
+        };
+    }
+}
+
+std::string Parser::nameIndex()
+{
+    auto&& var_with_angle_brackets = this->eat("VAR_NAME");
+
+    return var_with_angle_brackets.substr(1, var_with_angle_brackets.size() - 2);
+}
+
+AstValue Parser::numberIndex()
+{
+    auto&& type = Tokenizer::GetTokenType(this->_lookahead);
+
+    if (type == "INTEGER") {
+        return std::stoi(this->eat("INTEGER")); // literal won't be negative here
+    } else if (type == "DOUBLE") {
+        throw Exception("Cannot have a Double Literal after #");
+    } else if (type == "[") {
+        return this->parenthesizedExpression();
+    } else if (type == "#") {
+        return this->variable();
     } else {
         throw Exception("Unexpected variable index type: " + type);
     }
 }
-
-// AstObject Parser::literal()
-// {
-//     return this->numericLiteral();
-// }
 
 AstObject Parser::numericLiteral()
 {
@@ -386,7 +443,14 @@ bool Parser::IsAssignmentOperator(const Token &token)
 
 const Token& Parser::IsValidAssignmentTarget(const Token &token)
 {
-    return token; // TODO
+    auto&& type = Tokenizer::GetTokenType(token);
+    if (type == "numberIndexVariable" || type == "nameIndexVariable") {
+        return token;
+    } else {
+        std::stringstream ss;
+        ss << "Invalid assignment target on the lhs, token:" << token.to_string();
+        throw Exception(ss.str());
+    }
 }
 
 } // namespace rs274letter

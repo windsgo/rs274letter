@@ -13,8 +13,16 @@ int main(int argc, char** argv) {
 
     std::string code = 
     R"( G1 x-30 Y-[2.9+#2] Z+#<var> A123
-        #1=#2-2
-        #2=2+#3*[1.2+#<aa>]
+        ; 1+1 ; not valid
+        #1=[#2-2]
+        #2=[2+#3*[1.2+#<aa>]]
+        ##2=[#[##3*2]+#<_a>*#7]
+        #<_abc_> = -1
+        #2 = +##2
+
+        o1 if [1]
+            #1 = 2
+        o1 endif
     )";
 
     auto t = std::make_unique<Tokenizer>(code.cbegin(), code.cend());

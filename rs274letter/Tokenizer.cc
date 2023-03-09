@@ -34,11 +34,16 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     // NULL Tokens
     XX(R"(^\s+)", "NULL"),          // spaces
     XX(R"(^\(.*\))", "CMT()"),  // comment like : ( xxx )
-    XX(R"(^;.*)", "CMT;"),      // comment like : ( ; abc )
+    XX(R"(^;.*)", "CMT;"),      // comment like : ; abc 
     
-
     // Control Flow
-    XX(R"(^if\b|^IF\b)", "IF"),  // should be above LETTER
+
+    XX(R"(^\bcall\b|^\bCALL\b)", "call"), // o... call
+    XX(R"(^\bif\b|^\bIF\b)", "if"),  // if should be above LETTER
+    XX(R"(^\bendif\b|^\bENDIF\b)", "endif"),  // endif should be above LETTER
+
+
+    XX(R"(^[oO])", "O"), // control command letter "o" / "O", above all letters
 
     /*
     // Commands

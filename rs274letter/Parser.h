@@ -55,6 +55,7 @@ private:
      *  : emptyStatement
      *  | commandStatement
      *  | expressionStatement
+     *  | oCommandStatement
      *  ;
     */
     AstObject statement();
@@ -76,10 +77,32 @@ private:
 
     /**
      * An expressionStatement may be:
-     *  : Expression "RTN"
+     *  : expression "RTN"
      *  ;
     */
     AstObject expressionStatement();
+
+    /**
+     * An oCommandStatement may be:
+     *  : oCallStatement
+     *  | oIfStatement 
+     *  ;
+    */
+    AstObject oCommandStatement();
+
+    /**
+     * an oCallStatement is:
+     *  : (o_command_start) call optParenthesizedExpressionList "RTN"
+     *  ;
+    */
+    AstObject oCallStatement(const AstObject& o_command_start);
+    
+    /**
+     * an oIfStatement is:
+     *  : (o_command_start) if parenthesizedExpression
+     *  ;
+    */
+    AstObject oIfStatement(const AstObject& o_command_start);
 
     /**
      * A commandNumberGroupList is an array of commandNumberGroup:
@@ -94,6 +117,14 @@ private:
      *  ;
     */
     AstObject commandNumberGroup();
+
+    /**
+     * an oCommand is:
+     *  : O < nameIndex >
+     *  | O numberIndex
+     *  ;
+    */
+    AstObject oCommand();
 
 
     /**************************/
@@ -114,8 +145,9 @@ private:
      *  : assignmentExpression
      *  ;
      * Since `assignmentExpression` is the lowest priority expression
+     * @param: must_be_assignment
     */
-    AstObject expression();
+    AstObject expression(bool must_be_assignment = false);
 
     /**
      * An assignmentExpression may be:
@@ -124,8 +156,9 @@ private:
      *  ;
      * Note: the expanded assignmentExpression must have a leftHandSideExpresion on its left,
      * However, we can only first parse an `additiveExpression`, then examine if it is an `leftHandSideExpresion`
+     * @param bool must_be_assignment
     */
-    AstObject assignmentExpression();
+    AstObject assignmentExpression(bool must_be_assignment = false);
 
     /**
      * assignmentOperator is:
@@ -153,12 +186,14 @@ private:
 
     /**
      * An primaryExpression maybe:
-     *  : literal
-     *  | parenthesizedExpression
-     *  | leftHandSideExpression
+     *  : optADDITIVE_OPERATOR numericLiteral
+     *  | optADDITIVE_OPERATOR parenthesizedExpression
+     *  | optADDITIVE_OPERATOR leftHandSideExpression
      *  ;
+     * @param bool can_have_forward_additive_op
+     * use the param because we don't want like `--#1` appears
     */
-    AstObject primaryExpression();
+    AstObject primaryExpression(bool can_have_forward_additive_op = true);
 
     /**
      * A parenthesizedExpression is:
@@ -179,22 +214,33 @@ private:
     /**
      * an variable is:
      *  : "#" INTEGER (e.g. #02) (numberIndexVariable)
+     *  | "#" parenthesizedExpression (e.g. #[1+#4]) (numberIndexVariable)
+     *  | "#" variable (e.g. ##[3+#7]) (numberIndexVariable)
      *  | "#" VAR_NAME (e.g. #<myvar>) (nameIndexVariable)
      *  ;
     */
     AstObject variable();
 
+    /**
+     * a nameIndex is an std::string with angle brackets removed
+     *  : ("<") name_str (">")
+     *  ;
+    */
+    std::string nameIndex();
+
+    /**
+     * a numberIndex is:
+     *  : INTEGER(should be positive)
+     *  | parenthesizedExpression
+     *  | variable
+     *  ;
+    */
+    AstValue numberIndex();
+
     /**************************/
     /*****     literal     ****/
     /**************************/
 
-    // /**
-    //  * a literal is:
-    //  *  : numericLiteral
-    //  *  ;
-    //  * Currently just a numeric Literal
-    // */
-    // AstObject literal();
     /**
      * a numericLiteral may be:
      *  : doubleNumericLiteral
