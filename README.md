@@ -1,5 +1,7 @@
 # RS274LETTER
 
+Modern RS274 intepreter, with major difference in flow control, function definiation.
+
 Havn't finished.
 Now still in progress.
 
@@ -63,5 +65,38 @@ The number-indexed `#...` rules is the same as o-words `o...`.
     - `#1 = #2` or `#1 = -#2`
     - `#1 = []` or `#1 = -[]`
 
+    - `X1` or `X-1`
+    - `X#2` or `X-#2`
+    - `X[]` or `X-[]`
+
     Expressions like `#1 = 1 + 1`, this might be meaningful, but we won't allow that,
     just to follow the RS274 general usage.
+
+    I do this in the `primaryExpression` to accomplish this, especially about how to
+    deal with the forward ADDITIVE_OPERATOR `+/-`.
+
+
+### compare operator
+
+Other than the traditional `gt` `lt` `eq` `ne` `ge` `le`,
+we alse support `>` `<` `>=` `<=` `==` `!=` in `[...]` expressions.
+
+
+### if, while, do-while, func
+
+- if
+
+    I use a cleaner way to write if statements, with no explictly o-words,
+    and of course, do not support o-word if-statement.
+    
+    I think that's useless and very complex.
+
+    ```
+    if [ #2 > 1 ] 
+        G01 X1
+    elseif [ #2 < -1 ]
+        G01 X-1
+    else
+        G01 Y1
+    endif
+    ```

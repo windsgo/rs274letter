@@ -7,9 +7,20 @@
 #include "json.hpp"
 
 #include "Tokenizer.h"
+#include "Exception.h"
 
 namespace rs274letter
 {
+
+class SyntaxError : public Exception {
+public:
+    SyntaxError(const std::string& str) : Exception(str) { }
+    virtual const char* what() const noexcept override {
+        static std::string str
+            = "RS274Exception: SyntaxError:\n" + _str;
+        return str.c_str();
+    }
+};
 
 /**
  * AstObject
@@ -20,12 +31,14 @@ using AstObject = json::object;
 using AstArray = json::array;
 
 class Parser {
+    // friend class _BackupParserState;
 public:
     ~Parser() noexcept = default;
 
     /**
      * parse()
      * parse the whole program with a code string.
+     * You can catch the rs274letter::Exception to get error message
     */
     static AstObject parse(const std::string& string);
 
@@ -44,7 +57,7 @@ private:
      * A statementList is an array of statement:
      *  : statementList statement -> statement ... statement statement
     */
-    AstArray statementList(const std::optional<TokenType>& stop_lookahead_tokentype = std::nullopt);
+    AstArray statementList(const std::optional<std::vector<TokenType>>& stop_lookahead_tokentypes = std::nullopt);
 
     /**************************/
     /*****    Statement    ****/
@@ -55,7 +68,8 @@ private:
      *  : emptyStatement
      *  | commandStatement
      *  | expressionStatement
-     *  | oCommandStatement
+     *  | oCommandStatement (may be deleted) // TODO
+     *  | ifStatement
      *  ;
     */
     AstObject statement();
@@ -66,7 +80,7 @@ private:
      *  : "RTN"
      *  ;
     */
-    AstObject emptyStatement();
+    // AstObject emptyStatement();
 
     /**
      * A commandStatement may be:
@@ -98,11 +112,12 @@ private:
     AstObject oCallStatement(const AstObject& o_command_start);
     
     /**
-     * an oIfStatement is:
-     *  : (o_command_start) if parenthesizedExpression
+     * an ifStatement is:
+     *  : if parenthesizedExpression "RTN" opt-statementList endif
+     *  | if parenthesizedExpression "RTN" opt-statementList else statementList endif
      *  ;
     */
-    AstObject oIfStatement(const AstObject& o_command_start);
+    AstObject ifStatement();
 
     /**
      * A commandNumberGroupList is an array of commandNumberGroup:
@@ -256,6 +271,14 @@ private:
     // helper internal static functions
     static bool IsAssignmentOperator(const Token& token);
     static const Token& IsValidAssignmentTarget(const Token& token);
+
+    /**
+     * isNextLineOEndif()
+     * check if the next line is o... endif
+     * this will not modify _tokenizer and _lookahead
+    */
+    // bool isNextLineOEndif() noexcept;
+
 private:
     std::unique_ptr<Tokenizer> _tokenizer;
 

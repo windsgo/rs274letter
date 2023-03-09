@@ -10,6 +10,33 @@
 namespace rs274letter
 {
 
+// class _BackupParserState {
+//     friend class Parser;
+// public:
+//     _BackupParserState(Parser* parser) 
+//         : _parser(parser)
+//         , _it_bak(_parser->_tokenizer->getCurrentIterator())
+//         , _line_bak(_parser->_tokenizer->getCurLine())
+//         , _lookahead_bak(_parser->_lookahead)
+//     {    
+//         std::cout << "bak beg" << std::endl;
+//     }
+
+//     ~_BackupParserState() {
+//         _parser->_tokenizer->setCurrentIterator(_it_bak);
+//         _parser->_tokenizer->setCurLine(_line_bak);
+//         _parser->_lookahead = std::move(_lookahead_bak);
+//         std::cout << "bak end" << std::endl;
+//     }
+
+// private:
+//     Parser* _parser;
+
+//     std::string::const_iterator _it_bak;
+//     std::size_t _line_bak;
+//     Token _lookahead_bak;
+// };
+
 // public static method for parsing 
 AstObject Parser::parse(const std::string& string) {
     return Parser(string.cbegin(), string.cend()).parse();
@@ -36,14 +63,32 @@ AstObject Parser::program()
     };
 }
 
-AstArray Parser::statementList(const std::optional<TokenType>& stop_lookahead_tokentype /*= std::nullopt*/)
+static bool _is_lookahead_stoptokentypes(const Token& lookahead, std::vector<TokenType> vec) {
+    auto && next_type = Tokenizer::GetTokenType(lookahead);
+
+    for (auto&& type : vec) {
+        if (next_type == type) {
+            return true;
+        }
+    }
+    return false;
+}
+
+AstArray Parser::statementList(const std::optional<std::vector<TokenType>>& stop_lookahead_tokentypes /*= std::nullopt*/)
 {
     AstArray statement_list;
 
-    statement_list.emplace_back(this->statement());
-    while(!this->_lookahead.empty() && Tokenizer::GetTokenType(this->_lookahead) != stop_lookahead_tokentype.value_or("__no_reach__")) {
+    // statement_list.emplace_back(this->statement());
+    while(!this->_lookahead.empty()) {
+        if (stop_lookahead_tokentypes && _is_lookahead_stoptokentypes(this->_lookahead, 
+            stop_lookahead_tokentypes.value_or(std::vector<TokenType>()))) {
+            break;
+        }
+        
         // stop_lookahead_tokentype 是指结束查找语句的标识，如块语句从'{'查找到下一个'}'为止
-        statement_list.emplace_back(this->statement());
+        auto&& statement = this->statement();
+        if (!statement.empty())
+            statement_list.emplace_back(statement);
     }
 
     return statement_list;
@@ -53,24 +98,28 @@ AstObject Parser::statement()
 {
     auto&& lookahead_type = Tokenizer::GetTokenType(this->_lookahead);
     if (lookahead_type == "RTN") {
-        return this->emptyStatement();
+        // return this->emptyStatement();
+        this->eat("RTN");
+        return {};
     } else if (lookahead_type == "LETTER") {
         return this->commandStatement();
     } else if (lookahead_type == "O") {
         return this->oCommandStatement();
+    } else if (lookahead_type == "if") {
+        return this->ifStatement();
     } else { // TODO
         return this->expressionStatement(); 
     }
 }
 
-AstObject Parser::emptyStatement()
-{   
-    this->eat("RTN");
+// AstObject Parser::emptyStatement()
+// {   
+//     this->eat("RTN");
 
-    return  AstObject{
-        {"type", "emptyStatement"}
-    };
-}
+//     return  AstObject{
+//         {"type", "emptyStatement"}
+//     };
+// }
 
 AstObject Parser::commandStatement()
 {
@@ -103,41 +152,41 @@ AstObject Parser::oCommandStatement()
     if (next_type_after_o == "call") {
         return this->oCallStatement(o_command_start);
     } else if (next_type_after_o == "if") {
-        return this->oIfStatement(o_command_start);
+        throw SyntaxError("No need to use o-word in front of `if`");
     } else {
-        throw Exception("Unexpected token type after oCommand: " + next_type_after_o);
+        std::cout << util::BacktraceToString(100) << std::endl;
+        throw SyntaxError("Unexpected token type after oCommand: " + next_type_after_o);
     }
 }
 
 AstObject Parser::oCallStatement(const AstObject &o_command_start)
 {
-    return AstObject();
+    return AstObject(); // TODO
 }
 
-AstObject Parser::oIfStatement(const AstObject &o_command_start)
+AstObject Parser::ifStatement()
 {
     this->eat("if");
     auto&& test = this->parenthesizedExpression();
     this->eat("RTN");
 
-    auto&& conse = this->statement();
+    auto&& consequent = this->statementList({{"endif", "else", "elseif"}});
 
-    auto&& o_command_second = this->oCommand();
-    if (o_command_second != o_command_start) {
-        std::stringstream ss;
-        ss << "Different O command index, first: " 
-           << o_command_start.at("index").to_string()
-           << ", second: "
-           << o_command_second.at("index").to_string();
-        throw Exception(ss.str());
+    // else
+    AstArray alternate;
+    if (!this->_lookahead.empty() && Tokenizer::GetTokenType(this->_lookahead) == "else") {
+        this->eat("else");
+        alternate = this->statementList({{"endif"}});
     }
+
     this->eat("endif");
     this->eat("RTN");
 
     return AstObject{
-        {"type", "oIfStatement"},
+        {"type", "ifStatement"},
         {"test", test},
-        {"conse", conse}
+        {"consequent", consequent},
+        {"alternate", alternate}
     };
 }
 
@@ -200,9 +249,9 @@ AstObject Parser::assignmentExpression(bool must_be_assignment/* = false*/)
     auto&& left = this->additiveExpression();
 
     if (!this->IsAssignmentOperator(this->_lookahead)) {
-        // if must_be_assignment, throw exception here
+        // if must_be_assignment, throw SyntaxError here
         if (must_be_assignment) {
-            throw Exception("Must be assignment expression here, but no assignment operator,"
+            throw SyntaxError("Must be assignment expression here, but no assignment operator,"
                 " next token is:" + this->_lookahead.to_string());
         }
         
@@ -354,13 +403,13 @@ AstValue Parser::numberIndex()
     if (type == "INTEGER") {
         return std::stoi(this->eat("INTEGER")); // literal won't be negative here
     } else if (type == "DOUBLE") {
-        throw Exception("Cannot have a Double Literal after #");
+        throw SyntaxError("Cannot have a Double Literal after #");
     } else if (type == "[") {
         return this->parenthesizedExpression();
     } else if (type == "#") {
         return this->variable();
     } else {
-        throw Exception("Unexpected variable index type: " + type);
+        throw SyntaxError("Unexpected variable index type: " + type);
     }
 }
 
@@ -371,7 +420,7 @@ AstObject Parser::numericLiteral()
     } else if (Tokenizer::GetTokenType(this->_lookahead) == "DOUBLE") {
         return this->doubleNumericLiteral();
     } else {
-        throw Exception("Unknown numeric literal.");
+        throw SyntaxError("Unknown numeric literal.");
     }
 }
 
@@ -403,29 +452,33 @@ TokenValue Parser::eat(const TokenType &token_type)
 
     // lookahead is empty
     if (token.empty()) {
-        throw Exception("Unexpected end of input, expected: type = " + token_type);
+        throw SyntaxError("Unexpected end of input, expected: type = " + token_type);
     }
 
     // lookahead does not have the key: type
     auto&& token_type_opt = token.find("type");
     if (!token_type_opt || !token_type_opt.value().is_string()) {
-        throw Exception("Internal Error, token has no key 'type', or type is not string");
+        throw SyntaxError("Internal Error, token has no key 'type', or type is not string");
     }
 
     // lookahead does not have the key: value
     auto&& token_value_opt = token.find("value");
     if (!token_value_opt || !token_value_opt.value().is_string()) {
-        throw Exception("Internal Error, token has no key 'value', or value is not string");
+        throw SyntaxError("Internal Error, token has no key 'value', or value is not string");
     }
 
     // lookahead's type != the given eating token_type
     if (token_type_opt.value() != token_type) {
         std::cout << rs274letter::util::BacktraceToString(100) << std::endl;
-        throw Exception("Unexpected token:\n"
-              "type: " + token_type_opt.value().as_string()
-            + ", value: " + token_value_opt.value().as_string()
-            + "\nexpected:\n"
-              "type: " + token_type);
+        std::stringstream ss;
+        ss << "Unexpected token:\n"
+           << "type: " << token_type_opt.value().as_string()
+           << ", value: " << token_value_opt.value().as_string()
+           << "\nexpected:\n" 
+           << "type: " << token_type
+           << "\nline: " << this->_tokenizer->getCurLine()
+           << ", column: " << this->_tokenizer->getCurColumn();
+        throw SyntaxError(ss.str());
     }
 
     // lookahead the next token
@@ -449,8 +502,35 @@ const Token& Parser::IsValidAssignmentTarget(const Token &token)
     } else {
         std::stringstream ss;
         ss << "Invalid assignment target on the lhs, token:" << token.to_string();
-        throw Exception(ss.str());
+        throw SyntaxError(ss.str());
     }
 }
+
+// bool Parser::isNextLineOEndif() noexcept
+// {   
+//     _BackupParserState _b(this);
+
+//     try {
+//         auto&& type = Tokenizer::GetTokenType(this->_lookahead);
+
+//         if (type != "O") {
+//             return false;
+//         }
+
+//         this->oCommand();
+
+//         type = Tokenizer::GetTokenType(this->_lookahead);
+
+//         if (type != "endif") {
+//             return false;
+//         }
+
+//         this->eat("endif");
+//         this->eat("RTN");
+//     } catch (...) {
+//         return false;
+//     }
+//     return true;
+// }
 
 } // namespace rs274letter

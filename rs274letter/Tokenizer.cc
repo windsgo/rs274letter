@@ -2,6 +2,7 @@
 #include "Tokenizer.h"
 
 #include "Exception.h" // Define Exception
+#include "macro.h"
 
 #include <regex> // c++ regex library
 #include <optional> // optional value support
@@ -32,15 +33,16 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     XX(R"(^\n)", "RTN"),         // return, designed to use for line number calculation
 
     // NULL Tokens
-    XX(R"(^\s+)", "NULL"),          // spaces
+    XX(R"(^[ \t]+)", "NULL"),          // spaces and tabs, excluding \n
     XX(R"(^\(.*\))", "CMT()"),  // comment like : ( xxx )
     XX(R"(^;.*)", "CMT;"),      // comment like : ; abc 
     
     // Control Flow
-
+    // should be above LETTER
     XX(R"(^\bcall\b|^\bCALL\b)", "call"), // o... call
-    XX(R"(^\bif\b|^\bIF\b)", "if"),  // if should be above LETTER
-    XX(R"(^\bendif\b|^\bENDIF\b)", "endif"),  // endif should be above LETTER
+    XX(R"(^\bif\b|^\bIF\b)", "if"),  // if 
+    XX(R"(^\bendif\b|^\bENDIF\b)", "endif"),  // endif 
+    XX(R"(^\else\b|^\ELSE\b)", "else"),  // else 
 
 
     XX(R"(^[oO])", "O"), // control command letter "o" / "O", above all letters
@@ -119,6 +121,25 @@ static bool _should_skip_token_type(const TokenType& type) {
 }
 
 Token Tokenizer::getNextToken() {
+
+    // auto&& next_token = _lookAheadOneTokenNoRecurive(this->_cur);
+
+    // if (next_token.empty()) return {};
+
+    // this->_cur += next_token.at("value").as_string().size();
+
+    // auto&& type = Tokenizer::GetTokenType(next_token);
+
+    // if (type == "RTN") {
+    //     ++(this->_cur_line);
+    // }
+
+    // if (_should_skip_token_type(type)) {
+    //     return this->getNextToken();
+    // }
+
+    // return next_token;
+
     if (!this->hasMoreTokens()) {
         return {};
     }
@@ -141,9 +162,11 @@ Token Tokenizer::getNextToken() {
             << std::endl;
 
         this->_cur += token_value.size(); // set the cursor to the begin of the next possible token
+        this->_cur_col += token_value.size();
 
         if (token_type == "RTN") {
-            ++_cur_line;
+            ++(this->_cur_line);
+            this->_cur_col = 1;
         }
 
         if (_should_skip_token_type(token_type)) {
@@ -157,9 +180,32 @@ Token Tokenizer::getNextToken() {
     }
 
     std::stringstream ss;
-    ss << "Unexpected token(char): \"" << (*_cur) << "\"";
+    ss << "Unexpected token(char): \"" << (*this->_cur) << "\"";
     throw Exception(ss.str());
-}   
+}
+
+// std::vector<Token> Tokenizer::lookAheadTokens(size_t token_num) const {
+//     std::vector<Token> token_vec;
+//     token_vec.reserve(token_num);
+
+//     auto tmp_cursor = _cur;
+//     std::size_t token_got_num = 0;
+
+//     while(token_got_num < token_num && tmp_cursor != _end) {
+//         auto&& next_token = _lookAheadOneTokenNoRecurive(tmp_cursor);
+//         auto&& type = Tokenizer::GetTokenType(next_token);
+//         tmp_cursor += next_token.at("value").as_string().size();
+//         if (_should_skip_token_type(type)) {
+//             continue;
+//         }
+
+//         token_vec.emplace_back(next_token);
+//         ++token_got_num;
+//     }
+    
+//     RS274LETTER_ASSERT(token_vec.size() == token_num | tmp_cursor == this->_end);
+//     return token_vec;
+// }
 
 bool Tokenizer::hasMoreTokens() const
 {
@@ -179,5 +225,38 @@ bool Tokenizer::IsTokenType(const Token &token, const TokenType &token_type)
 TokenType Tokenizer::GetTokenType(const Token& token) {
     return token.at("type").as_string();
 }
+
+// Token Tokenizer::_lookAheadOneTokenNoRecurive(std::string::const_iterator start) const {
+//     if (start == this->_end) {
+//         return {};
+//     }
+
+//     for (auto&& [raw_pattern_str, pattern, token_type] : s_spec_vec) {
+//         auto&& token_value_opt = _match_regex(pattern, start, this->_end);
+//         if (!token_value_opt) {
+//             continue; // current pattern match failed, continue match next pattern defined inthe `s_spec_vec`
+//         }
+
+//         // matched, token_value_opt != std::nullopt
+//         auto&& token_value = token_value_opt.value();
+        
+//         if (token_type != "NULL")
+//         std::cout << "\t[DEBUG]: " 
+//             // << "Match regex: " << "\033[33m" << raw_pattern_str  << "\033[0m"
+//             << "\ttype: " << "\033[32m" << token_type << "\033[0m"
+//             << ",\tvalue: " << "[" << "\033[7m" << (token_type == "RTN" ? "\\n" : token_value)
+//             << "\033[0m" << "]" 
+//             << std::endl;
+
+//         return Token { // json::object
+//             {"type", token_type},
+//             {"value", token_value}
+//         };
+//     }
+
+//     std::stringstream ss;
+//     ss << "Unexpected token(char): \"" << (*start) << "\"";
+//     throw Exception(ss.str());
+// }
 
 } // namespace rs274letter

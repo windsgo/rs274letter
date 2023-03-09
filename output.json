@@ -78,9 +78,6 @@
       "type": "commandStatement"
     },
     {
-      "type": "emptyStatement"
-    },
-    {
       "expression": {
         "left": {
           "index": 1,
@@ -240,29 +237,30 @@
       "type": "expressionStatement"
     },
     {
-      "type": "emptyStatement"
-    },
-    {
-      "conse": {
-        "expression": {
-          "left": {
-            "index": 1,
-            "type": "numberIndexVariable"
+      "alternate": [
+        {
+          "expression": {
+            "left": {
+              "index": 233,
+              "type": "numberIndexVariable"
+            },
+            "operator": "=",
+            "right": {
+              "type": "integerNumericLiteral",
+              "value": 233
+            },
+            "type": "assignmentExpression"
           },
-          "operator": "=",
-          "right": {
-            "type": "integerNumericLiteral",
-            "value": 2
-          },
-          "type": "assignmentExpression"
-        },
-        "type": "expressionStatement"
-      },
+          "type": "expressionStatement"
+        }
+      ],
+      "consequent": [
+      ],
       "test": {
         "type": "integerNumericLiteral",
         "value": 1
       },
-      "type": "oIfStatement"
+      "type": "ifStatement"
     }
   ],
   "type": "program"

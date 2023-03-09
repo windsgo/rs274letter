@@ -18,15 +18,29 @@ int main(int argc, char** argv) {
         #2=[2+#3*[1.2+#<aa>]]
         ##2=[#[##3*2]+#<_a>*#7]
         #<_abc_> = -1
-        #2 = +##2
+        #2 = +##2 
 
-        o1 if [1]
-            #1 = 2
-        o1 endif
+        if [1]
+            ;if [#1 = 1] ; support empty if statement
+
+            ;    #1 = 2
+            ;endif
+
+            ;if [0]
+
+            ;endif
+        else
+            #233 = 233
+
+        endif
     )";
 
     auto t = std::make_unique<Tokenizer>(code.cbegin(), code.cend());
 
+    // auto vec = t->lookAheadTokens(1000);
+    // for (auto&& i : vec) {
+    //     std::cout << i.to_string() << std::endl;
+    // }
 
     try {
         while(t->hasMoreTokens()) {

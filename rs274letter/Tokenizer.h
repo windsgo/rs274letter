@@ -38,9 +38,16 @@ public:
     /**
      * getNextToken()
      * Get the next token.
-     * Side Effects: _cursor and _cur_line may change.
+     * Side Effects: _cur and _cur_line may change.
      */
     Token getNextToken();
+
+    /**
+     * lookAheadTokens()
+     * look ahead the next few tokens
+     * This is const method, will not change _cur and _cur_line
+    */
+    // std::vector<Token> lookAheadTokens(size_t token_num) const;
 
     /**
      * hasMoreTokens()
@@ -55,6 +62,9 @@ public:
      * line number will increase if a '\n' is read
     */
     inline std::size_t getCurLine() const { return _cur_line; }
+    inline std::size_t getCurColumn() const { return _cur_col; }
+
+    // inline void setCurLine(std::size_t line) { _cur_line = line; } 
 
     /**
      * IsTokenType()
@@ -69,10 +79,22 @@ public:
     */
     static TokenType GetTokenType(const Token& token);
 
+    // inline std::string::const_iterator getCurrentIterator() const { return _cur; }
+
+    // inline void setCurrentIterator(const std::string::const_iterator& cit) { _cur = cit; }
+
+private:
+    /**
+     * _lookAheadOneToken()
+     * match the next token, return a token anyway, even if it's null or comments
+    */
+    // Token _lookAheadOneTokenNoRecurive(std::string::const_iterator start) const;
+
 private:
     std::string::const_iterator _cur;
     std::string::const_iterator _end;
-    std::size_t _cur_line{0};
+    std::size_t _cur_line{1};
+    std::size_t _cur_col{1};
 };
 
 } // namespace rs274letter

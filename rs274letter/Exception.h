@@ -6,7 +6,7 @@
 namespace rs274letter {
 
 class Exception : std::exception {
-private:
+protected:
     std::string _str;
 
 public:
