@@ -124,7 +124,8 @@ AstObject Parser::statement()
 AstObject Parser::commandStatement()
 {
     auto&& command_number_group_list = this->commandNumberGroupList();
-    this->eat("RTN");
+    
+    if (!this->_lookahead.empty()) this->eat("RTN");
 
     return AstObject{
         {"type", "commandStatement"},
@@ -134,8 +135,13 @@ AstObject Parser::commandStatement()
 
 AstObject Parser::expressionStatement()
 {
+#ifdef NO_SINGLE_NON_ASSIGN_EXPRESSION
     auto&& expression = this->expression(true); // must be assignment
-    this->eat("RTN");
+#else // NOT NO_SINGLE_NON_ASSIGN_EXPRESSION
+    auto&& expression = this->expression(); // must be assignment
+#endif // NO_SINGLE_NON_ASSIGN_EXPRESSION
+    
+    if (!this->_lookahead.empty()) this->eat("RTN");
 
     return AstObject{
         {"type", "expressionStatement"},
@@ -164,29 +170,45 @@ AstObject Parser::oCallStatement(const AstObject &o_command_start)
     return AstObject(); // TODO
 }
 
-AstObject Parser::ifStatement()
+AstObject Parser::ifStatement(bool should_eat_if/* = true*/)
 {
-    this->eat("if");
+    if (should_eat_if) this->eat("if");
     auto&& test = this->parenthesizedExpression();
     this->eat("RTN");
 
     auto&& consequent = this->statementList({{"endif", "else", "elseif"}});
 
-    // else
     AstArray alternate;
+    // elseif
+    if (!this->_lookahead.empty() && Tokenizer::GetTokenType(this->_lookahead) == "elseif") {
+        this->eat("elseif");
+        
+        // an if statement that doesn't eat `if` 
+        auto&& sub_if_statement = this->ifStatement(false); 
+        
+        return AstObject{
+            {"type", "ifStatement"},
+            {"test", test},
+            {"consequent", consequent},
+            {"alternate", sub_if_statement}
+        };
+    }
+
+    // else
     if (!this->_lookahead.empty() && Tokenizer::GetTokenType(this->_lookahead) == "else") {
         this->eat("else");
         alternate = this->statementList({{"endif"}});
     }
 
     this->eat("endif");
-    this->eat("RTN");
+    
+    if (!this->_lookahead.empty()) this->eat("RTN");
 
     return AstObject{
         {"type", "ifStatement"},
         {"test", test},
         {"consequent", consequent},
-        {"alternate", alternate}
+        {"alternate", std::move(alternate)}
     };
 }
 
@@ -251,8 +273,12 @@ AstObject Parser::assignmentExpression(bool must_be_assignment/* = false*/)
     if (!this->IsAssignmentOperator(this->_lookahead)) {
         // if must_be_assignment, throw SyntaxError here
         if (must_be_assignment) {
-            throw SyntaxError("Must be assignment expression here, but no assignment operator,"
-                " next token is:" + this->_lookahead.to_string());
+            std::cout << util::BacktraceToString(100) << std::endl;
+            _ss << this->_tokenizer->getLineColumnShowString()
+                << "\nMust be assignment expression here, but no assignment operator,"
+                << " next token is:\n"
+                << Tokenizer::GetTokenTypeValueShowString(this->_lookahead);
+            throw SyntaxError(_ss.str());
         }
         
         // if next token is not an assign operator
@@ -265,7 +291,11 @@ AstObject Parser::assignmentExpression(bool must_be_assignment/* = false*/)
         {"type", "assignmentExpression"},
         {"operator", this->assignmentOperator()},
         {"left", this->IsValidAssignmentTarget(left)}, // The additiveExpression may not be a valid `leftHandSideExpresion`
+#ifdef MUST_PRIMARY_RIGHT_HANDSIDE_OF_ASSIGN
         {"right", this->primaryExpression()} // need to be a primary expression in rs274
+#else // NOT MUST_PRIMARY_RIGHT_HANDSIDE_OF_ASSIGN
+        {"right", this->assignmentExpression()} 
+#endif // MUST_PRIMARY_RIGHT_HANDSIDE_OF_ASSIGN
     };
 }
 
@@ -470,15 +500,12 @@ TokenValue Parser::eat(const TokenType &token_type)
     // lookahead's type != the given eating token_type
     if (token_type_opt.value() != token_type) {
         std::cout << rs274letter::util::BacktraceToString(100) << std::endl;
-        std::stringstream ss;
-        ss << "Unexpected token:\n"
-           << "type: " << token_type_opt.value().as_string()
-           << ", value: " << token_value_opt.value().as_string()
-           << "\nexpected:\n" 
-           << "type: " << token_type
-           << "\nline: " << this->_tokenizer->getCurLine()
-           << ", column: " << this->_tokenizer->getCurColumn();
-        throw SyntaxError(ss.str());
+        _ss << "Unexpected token:\n"
+            << Tokenizer::GetTokenTypeValueShowString(token)
+            << "\nexpected:\n" 
+            << "type: " << token_type
+            << "\n" << this->_tokenizer->getLineColumnShowString();
+        throw SyntaxError(_ss.str());
     }
 
     // lookahead the next token
@@ -494,15 +521,14 @@ bool Parser::IsAssignmentOperator(const Token &token)
 }
 
 
-const Token& Parser::IsValidAssignmentTarget(const Token &token)
+const AstValue& Parser::IsValidAssignmentTarget(const AstValue &ast_value)
 {
-    auto&& type = Tokenizer::GetTokenType(token);
+    auto&& type = ast_value.at("type").as_string();
     if (type == "numberIndexVariable" || type == "nameIndexVariable") {
-        return token;
+        return ast_value;
     } else {
-        std::stringstream ss;
-        ss << "Invalid assignment target on the lhs, token:" << token.to_string();
-        throw SyntaxError(ss.str());
+        _ss << "Invalid assignment target on the lhs, target: " << ast_value.to_string();
+        throw SyntaxError(_ss.str());
     }
 }
 

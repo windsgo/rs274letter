@@ -1,0 +1,12 @@
+; test
+if[2]
+
+#1 = 2
+
+; elseif
+
+elseif [3]
+
+#1 = [1 + 1 * 2]
+
+endif

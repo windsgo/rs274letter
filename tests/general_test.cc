@@ -23,17 +23,35 @@ int main(int argc, char** argv) {
         if [1]
             ;if [#1 = 1] ; support empty if statement
 
-            ;    #1 = 2
+                ;#1 = 2
             ;endif
 
             ;if [0]
 
             ;endif
-        else
+        elseif [123]
+        
             #233 = 233
 
+        else
+            1
+            #1 = 2
         endif
     )";
+
+    if (argc > 1) {
+        auto file_name = argv[1];
+
+        std::ifstream ifs(file_name, std::ios_base::in);
+        
+        if (ifs.is_open()) {
+            std::stringstream ss;
+            ss << ifs.rdbuf();
+            code = ss.str();
+        }
+
+        ifs.close();
+    }
 
     auto t = std::make_unique<Tokenizer>(code.cbegin(), code.cend());
 

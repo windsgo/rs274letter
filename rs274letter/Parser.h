@@ -33,7 +33,7 @@ using AstArray = json::array;
 class Parser {
     // friend class _BackupParserState;
 public:
-    ~Parser() noexcept = default;
+    ~Parser() { _ss.clear(); }
 
     /**
      * parse()
@@ -117,7 +117,7 @@ private:
      *  | if parenthesizedExpression "RTN" opt-statementList else statementList endif
      *  ;
     */
-    AstObject ifStatement();
+    AstObject ifStatement(bool should_eat_if = true);
 
     /**
      * A commandNumberGroupList is an array of commandNumberGroup:
@@ -270,7 +270,7 @@ private:
 private:
     // helper internal static functions
     static bool IsAssignmentOperator(const Token& token);
-    static const Token& IsValidAssignmentTarget(const Token& token);
+    static const AstValue& IsValidAssignmentTarget(const AstValue& ast_value);
 
     /**
      * isNextLineOEndif()
@@ -283,6 +283,8 @@ private:
     std::unique_ptr<Tokenizer> _tokenizer;
 
     Token _lookahead;
+
+    inline static thread_local std::stringstream _ss{}; // used for output string
 };
 
 } // namespace rs274letter

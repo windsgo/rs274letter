@@ -1,264 +1,68 @@
 {
   "body": [
     {
-      "commands": [
-        {
-          "letter": "g",
-          "number": {
-            "type": "integerNumericLiteral",
-            "value": 1
-          },
-          "type": "commandNumberGroup"
-        },
-        {
-          "letter": "x",
-          "number": {
-            "left": {
-              "type": "integerNumericLiteral",
-              "value": 0
-            },
-            "operator": "-",
-            "right": {
-              "type": "integerNumericLiteral",
-              "value": 30
-            },
-            "type": "binaryExpression"
-          },
-          "type": "commandNumberGroup"
-        },
-        {
-          "letter": "y",
-          "number": {
-            "left": {
-              "type": "integerNumericLiteral",
-              "value": 0
-            },
-            "operator": "-",
-            "right": {
+      "alternate": {
+        "alternate": [
+        ],
+        "consequent": [
+          {
+            "expression": {
               "left": {
-                "type": "doubleNumericLiteral",
-                "value": 2.900000
-              },
-              "operator": "+",
-              "right": {
-                "index": 2,
+                "index": 1,
                 "type": "numberIndexVariable"
               },
-              "type": "binaryExpression"
-            },
-            "type": "binaryExpression"
-          },
-          "type": "commandNumberGroup"
-        },
-        {
-          "letter": "z",
-          "number": {
-            "left": {
-              "type": "integerNumericLiteral",
-              "value": 0
-            },
-            "operator": "+",
-            "right": {
-              "index": "var",
-              "type": "nameIndexVariable"
-            },
-            "type": "binaryExpression"
-          },
-          "type": "commandNumberGroup"
-        },
-        {
-          "letter": "a",
-          "number": {
-            "type": "integerNumericLiteral",
-            "value": 123
-          },
-          "type": "commandNumberGroup"
-        }
-      ],
-      "type": "commandStatement"
-    },
-    {
-      "expression": {
-        "left": {
-          "index": 1,
-          "type": "numberIndexVariable"
-        },
-        "operator": "=",
-        "right": {
-          "left": {
-            "index": 2,
-            "type": "numberIndexVariable"
-          },
-          "operator": "-",
-          "right": {
-            "type": "integerNumericLiteral",
-            "value": 2
-          },
-          "type": "binaryExpression"
-        },
-        "type": "assignmentExpression"
-      },
-      "type": "expressionStatement"
-    },
-    {
-      "expression": {
-        "left": {
-          "index": 2,
-          "type": "numberIndexVariable"
-        },
-        "operator": "=",
-        "right": {
-          "left": {
-            "type": "integerNumericLiteral",
-            "value": 2
-          },
-          "operator": "+",
-          "right": {
-            "left": {
-              "index": 3,
-              "type": "numberIndexVariable"
-            },
-            "operator": "*",
-            "right": {
-              "left": {
-                "type": "doubleNumericLiteral",
-                "value": 1.200000
-              },
-              "operator": "+",
+              "operator": "=",
               "right": {
-                "index": "aa",
-                "type": "nameIndexVariable"
-              },
-              "type": "binaryExpression"
-            },
-            "type": "binaryExpression"
-          },
-          "type": "binaryExpression"
-        },
-        "type": "assignmentExpression"
-      },
-      "type": "expressionStatement"
-    },
-    {
-      "expression": {
-        "left": {
-          "index": {
-            "index": 2,
-            "type": "numberIndexVariable"
-          },
-          "type": "numberIndexVariable"
-        },
-        "operator": "=",
-        "right": {
-          "left": {
-            "index": {
-              "left": {
-                "index": {
-                  "index": 3,
-                  "type": "numberIndexVariable"
+                "left": {
+                  "type": "integerNumericLiteral",
+                  "value": 1
                 },
-                "type": "numberIndexVariable"
+                "operator": "+",
+                "right": {
+                  "left": {
+                    "type": "integerNumericLiteral",
+                    "value": 1
+                  },
+                  "operator": "*",
+                  "right": {
+                    "type": "integerNumericLiteral",
+                    "value": 2
+                  },
+                  "type": "binaryExpression"
+                },
+                "type": "binaryExpression"
               },
-              "operator": "*",
-              "right": {
-                "type": "integerNumericLiteral",
-                "value": 2
-              },
-              "type": "binaryExpression"
+              "type": "assignmentExpression"
             },
-            "type": "numberIndexVariable"
-          },
-          "operator": "+",
-          "right": {
-            "left": {
-              "index": "_a",
-              "type": "nameIndexVariable"
-            },
-            "operator": "*",
-            "right": {
-              "index": 7,
-              "type": "numberIndexVariable"
-            },
-            "type": "binaryExpression"
-          },
-          "type": "binaryExpression"
+            "type": "expressionStatement"
+          }
+        ],
+        "test": {
+          "type": "integerNumericLiteral",
+          "value": 3
         },
-        "type": "assignmentExpression"
+        "type": "ifStatement"
       },
-      "type": "expressionStatement"
-    },
-    {
-      "expression": {
-        "left": {
-          "index": "_abc_",
-          "type": "nameIndexVariable"
-        },
-        "operator": "=",
-        "right": {
-          "left": {
-            "type": "integerNumericLiteral",
-            "value": 0
-          },
-          "operator": "-",
-          "right": {
-            "type": "integerNumericLiteral",
-            "value": 1
-          },
-          "type": "binaryExpression"
-        },
-        "type": "assignmentExpression"
-      },
-      "type": "expressionStatement"
-    },
-    {
-      "expression": {
-        "left": {
-          "index": 2,
-          "type": "numberIndexVariable"
-        },
-        "operator": "=",
-        "right": {
-          "left": {
-            "type": "integerNumericLiteral",
-            "value": 0
-          },
-          "operator": "+",
-          "right": {
-            "index": {
-              "index": 2,
-              "type": "numberIndexVariable"
-            },
-            "type": "numberIndexVariable"
-          },
-          "type": "binaryExpression"
-        },
-        "type": "assignmentExpression"
-      },
-      "type": "expressionStatement"
-    },
-    {
-      "alternate": [
+      "consequent": [
         {
           "expression": {
             "left": {
-              "index": 233,
+              "index": 1,
               "type": "numberIndexVariable"
             },
             "operator": "=",
             "right": {
               "type": "integerNumericLiteral",
-              "value": 233
+              "value": 2
             },
             "type": "assignmentExpression"
           },
           "type": "expressionStatement"
         }
       ],
-      "consequent": [
-      ],
       "test": {
         "type": "integerNumericLiteral",
-        "value": 1
+        "value": 2
       },
       "type": "ifStatement"
     }

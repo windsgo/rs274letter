@@ -100,3 +100,7 @@ we alse support `>` `<` `>=` `<=` `==` `!=` in `[...]` expressions.
         G01 Y1
     endif
     ```
+
+    About how to implement the `elseif` logic, I decide to recursively get the `ifStatement`
+    with an `should_eat_if` para to tell whether should eat an `if` or not at the begining of
+    the parse of an `ifStatement`.

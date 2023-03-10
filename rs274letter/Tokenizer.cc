@@ -42,7 +42,8 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     XX(R"(^\bcall\b|^\bCALL\b)", "call"), // o... call
     XX(R"(^\bif\b|^\bIF\b)", "if"),  // if 
     XX(R"(^\bendif\b|^\bENDIF\b)", "endif"),  // endif 
-    XX(R"(^\else\b|^\ELSE\b)", "else"),  // else 
+    XX(R"(^\belseif\b|^\bELSEIF\b)", "elseif"),  // elseif 
+    XX(R"(^\belse\b|^\bELSE\b)", "else"),  // else 
 
 
     XX(R"(^[oO])", "O"), // control command letter "o" / "O", above all letters
@@ -154,12 +155,12 @@ Token Tokenizer::getNextToken() {
 
         auto&& token_value = token_value_opt.value();
         
-        if (token_type != "NULL")
-        std::cout << "\t[DEBUG]: " 
-            // << "Match regex: " << "\033[33m" << raw_pattern_str  << "\033[0m"
-            << "\ttype: " << "\033[32m" << token_type << "\033[0m"
-            << ",\tvalue: " << "[" << "\033[7m" << (token_type == "RTN" ? "\\n" : token_value) << "\033[0m" << "]" 
-            << std::endl;
+        if (token_type != "NULL" || true)
+            std::cout << "\t[DEBUG]: " 
+                // << "Match regex: " << "\033[33m" << raw_pattern_str  << "\033[0m"
+                << "\ttype: " << "\033[32m" << token_type << "\033[0m"
+                << ",\tvalue: " << "[" << "\033[7m" << (token_type == "RTN" ? "\\n" : token_value) << "\033[0m" << "]" 
+                << std::endl;
 
         this->_cur += token_value.size(); // set the cursor to the begin of the next possible token
         this->_cur_col += token_value.size();
@@ -224,6 +225,31 @@ bool Tokenizer::IsTokenType(const Token &token, const TokenType &token_type)
 
 TokenType Tokenizer::GetTokenType(const Token& token) {
     return token.at("type").as_string();
+}
+
+std::string Tokenizer::GetTokenTypeValueShowString(const Token &token)
+{
+    std::stringstream ss;
+#define _XX(x) \
+    if (token.empty()) { \
+        ss << "_empty_"; \
+    } else { \
+        auto&& x = token.find(#x).value_or("_no_"#x"_"); \
+        if (!x.is_string()) { \
+            ss << "_none_str_"#x"_"; \
+        } else { \
+            ss << x.as_string(); \
+        } \
+    }
+
+    ss << "type: ";
+    _XX(type)
+    ss << ", value: ";
+    _XX(value)
+
+#undef _XX
+    
+    return ss.str();
 }
 
 // Token Tokenizer::_lookAheadOneTokenNoRecurive(std::string::const_iterator start) const {

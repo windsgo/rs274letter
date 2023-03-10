@@ -64,6 +64,12 @@ public:
     inline std::size_t getCurLine() const { return _cur_line; }
     inline std::size_t getCurColumn() const { return _cur_col; }
 
+    inline std::string getLineColumnShowString() const {
+        std::stringstream ss;
+        ss << "line: " << _cur_line << ", column: " << _cur_col;
+        return ss.str();
+    } 
+
     // inline void setCurLine(std::size_t line) { _cur_line = line; } 
 
     /**
@@ -78,6 +84,12 @@ public:
      * Return the token's type as a string
     */
     static TokenType GetTokenType(const Token& token);
+
+    /**
+     * GetTokenTypeValueShowString()
+     * Return a string to show the type and value of a token
+    */
+    static std::string GetTokenTypeValueShowString(const Token& token);
 
     // inline std::string::const_iterator getCurrentIterator() const { return _cur; }
 
