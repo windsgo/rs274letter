@@ -1,5 +1,6 @@
 #include "util.h"
 
+#if (defined (__unix__)) && (!defined (_WIN32))
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
@@ -10,15 +11,17 @@
 
 #ifdef BOOST_STACKTRACE_USE_BACKTRACE
 #include <boost/stacktrace.hpp>
-#else
+#else // BOOST_STACKTRACE_USE_BACKTRACE
 #include <backtrace.h>
-#endif
+#endif // BOOST_STACKTRACE_USE_BACKTRACE
+#endif // (defined (__unix__)) && (!defined (_WIN32))
 
 
 namespace rs274letter { namespace util 
 {
 
-void Backtrace(std::vector<std::string> &bt, [[maybe_unused]] int size, int skip) {
+void Backtrace([[maybe_unused]] std::vector<std::string> &bt, [[maybe_unused]] int size, [[maybe_unused]] int skip) {
+#if (defined (__unix__)) && (!defined (_WIN32))
 #ifdef BOOST_STACKTRACE_USE_BACKTRACE
     auto vec = boost::stacktrace::stacktrace().as_vector();
     bt.reserve(vec.size() - skip);
@@ -47,6 +50,9 @@ void Backtrace(std::vector<std::string> &bt, [[maybe_unused]] int size, int skip
     free(strings);
     free(array);
 #endif // BOOST_STACKTRACE_USE_BACKTRACE
+#else // (defined (__unix__)) && (!defined (_WIN32))
+    return;
+#endif // (defined (__unix__)) && (!defined (_WIN32))
 }
 
 std::string BacktraceToString(int size, int skip, const std::string& prefix) {

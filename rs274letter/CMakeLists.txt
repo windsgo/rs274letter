@@ -4,7 +4,12 @@ add_library(rs274letter SHARED
     util.cc
 )
 
-target_compile_definitions(rs274letter PRIVATE BOOST_STACKTRACE_USE_BACKTRACE)
+find_package(Boost)
+if (Boost_FOUND) 
+    message(STATUS Boost has found)
+    target_compile_definitions(rs274letter PRIVATE BOOST_STACKTRACE_USE_BACKTRACE)
+endif(Boost_FOUND)
+
 
 # 不允许单行出现非赋值表达式
 target_compile_definitions(rs274letter PRIVATE NO_SINGLE_NON_ASSIGN_EXPRESSION)
@@ -17,4 +22,8 @@ target_include_directories(rs274letter PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third_party/meojson/include>
 )
 
-target_link_libraries(rs274letter PUBLIC backtrace)
+if (UNIX)
+target_link_libraries(rs274letter PUBLIC dl backtrace)
+elseif(WIN32)
+
+endif (UNIX)
