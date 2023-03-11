@@ -33,7 +33,7 @@ using AstArray = json::array;
 class Parser {
     // friend class _BackupParserState;
 public:
-    ~Parser() { _ss.clear(); }
+    ~Parser() noexcept = default;
 
     /**
      * parse()
@@ -115,6 +115,7 @@ private:
     /**
      * an oIfStatement is:
      *  : (pre-oCommand) if parenthesizedExpression "RTN" opt-statementList endif
+     *  | (pre-oCommand) if parenthesizedExpression "RTN" opt-statementList oCommand  endif
      *  ;
      */
     AstObject oIfStatement(const AstObject& o_command_start,
@@ -287,9 +288,11 @@ private:
     
     // store the last oCommand AstObject
     // for sub flow control to save them
-    AstObject _last_o_word;
 
-    inline static thread_local std::stringstream _ss{}; // used for output string
+    // Note: any reference bound to this `_last_o_word` needs to pay attention
+    // that `_last_o_word` may change during the call of this->statementList()
+    // the reference bound to it may potentially change !
+    AstObject _last_o_word;
 };
 
 } // namespace rs274letter

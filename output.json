@@ -2,9 +2,139 @@
   "body": [
     {
       "alternate": {
-        "alternate": [
-        ],
+        "alternate": {
+          "alternate": [
+            {
+              "expression": {
+                "left": {
+                  "index": 1,
+                  "type": "numberIndexVariable"
+                },
+                "operator": "=",
+                "right": {
+                  "left": {
+                    "type": "integerNumericLiteral",
+                    "value": 1
+                  },
+                  "operator": "+",
+                  "right": {
+                    "left": {
+                      "type": "integerNumericLiteral",
+                      "value": 1
+                    },
+                    "operator": "*",
+                    "right": {
+                      "type": "integerNumericLiteral",
+                      "value": 2
+                    },
+                    "type": "binaryExpression"
+                  },
+                  "type": "binaryExpression"
+                },
+                "type": "assignmentExpression"
+              },
+              "type": "expressionStatement"
+            }
+          ],
+          "consequent": [
+            {
+              "alternate": {
+                "alternate": [
+                ],
+                "consequent": [
+                ],
+                "ifOCommand": {
+                  "index": 888,
+                  "type": "numberIndexOCommand"
+                },
+                "otherWordsList": [
+                  {
+                    "index": 777,
+                    "type": "numberIndexOCommand"
+                  }
+                ],
+                "test": {
+                  "type": "integerNumericLiteral",
+                  "value": 3
+                },
+                "type": "oIfStatement"
+              },
+              "consequent": [
+              ],
+              "ifOCommand": {
+                "index": 999,
+                "type": "numberIndexOCommand"
+              },
+              "otherWordsList": [
+                {
+                  "index": 888,
+                  "type": "numberIndexOCommand"
+                }
+              ],
+              "test": {
+                "type": "integerNumericLiteral",
+                "value": 2
+              },
+              "type": "oIfStatement"
+            }
+          ],
+          "ifOCommand": {
+            "index": 222,
+            "type": "numberIndexOCommand"
+          },
+          "otherWordsList": [
+            {
+              "index": {
+                "index": 123,
+                "type": "numberIndexVariable"
+              },
+              "type": "numberIndexOCommand"
+            },
+            {
+              "index": "aa",
+              "type": "nameIndexOCommand"
+            }
+          ],
+          "test": {
+            "left": {
+              "index": "name",
+              "type": "nameIndexVariable"
+            },
+            "operator": "=",
+            "right": {
+              "type": "integerNumericLiteral",
+              "value": 233
+            },
+            "type": "assignmentExpression"
+          },
+          "type": "oIfStatement"
+        },
         "consequent": [
+          {
+            "alternate": [
+            ],
+            "consequent": [
+            ],
+            "ifOCommand": {
+              "index": 2,
+              "type": "numberIndexOCommand"
+            },
+            "otherWordsList": [
+              {
+                "index": 3,
+                "type": "numberIndexOCommand"
+              },
+              {
+                "index": 4,
+                "type": "numberIndexOCommand"
+              }
+            ],
+            "test": {
+              "type": "integerNumericLiteral",
+              "value": 1
+            },
+            "type": "oIfStatement"
+          }
         ],
         "ifOCommand": {
           "index": 222,
@@ -12,8 +142,8 @@
         },
         "otherWordsList": [
           {
-            "index": "aa",
-            "type": "nameIndexOCommand"
+            "index": 222,
+            "type": "numberIndexOCommand"
           }
         ],
         "test": {

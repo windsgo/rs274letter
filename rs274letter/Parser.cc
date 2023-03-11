@@ -6,6 +6,7 @@
 #include "macro.h"
 
 #include <iostream>
+#include <sstream>
 
 namespace rs274letter
 {
@@ -81,20 +82,35 @@ AstArray Parser::statementList(const std::optional<std::vector<TokenType>>& stop
         if (Tokenizer::GetTokenType(this->_lookahead) != "O") {
             // Not a statement(line) start with 'O'
             auto&& statement = this->statement();
+
+            // may return an emptyStatement which is an empty AstObject()
             if (!statement.empty()) {
                 statement_list.emplace_back(statement);
             }
+
             continue; // next statement
         }
 
-        // statement starts with an O
+        // encounter a statement which starts with an O
+
+        // get the o-word
         auto&& o_word = this->oCommand();
+
         if (stop_lookahead_tokentypes_after_o 
             && _is_lookahead_stoptokentypes(this->_lookahead, 
             stop_lookahead_tokentypes_after_o.value_or(std::vector<TokenType>()))) {
+            // meet the tokentype specified in `stop_lookahead_tokentypes_after_o`
+
+            // record the eaten o-word here
             _last_o_word = std::move(o_word);
+
+            // and break, to stop generating statementList and return 
             break;
         } else {
+            // do not have stop generating flag
+            // or haven't met the stop generating flags specified
+            
+            // emplace back a oCommandStatement with the given pre-o-word(which is eaten)
             statement_list.emplace_back(this->oCommandStatement(o_word));
         }
     }
@@ -107,6 +123,8 @@ AstObject Parser::statement()
     auto&& lookahead_type = Tokenizer::GetTokenType(this->_lookahead);
     if (lookahead_type == "RTN") {
         // return this->emptyStatement();
+        // we see emptyStatement as a real `empty`
+        // don't record anything
         this->eat("RTN");
         return {};
     } else if (lookahead_type == "LETTER") {
@@ -183,8 +201,20 @@ AstObject Parser::oCallStatement(const AstObject &o_command_start)
 
 AstObject Parser::oIfStatement(const AstObject &o_command_start, bool should_eat_if/* = true*/)
 {
+    // should_eat_if is false when want to get a sub `elseif` statement
     if (should_eat_if) this->eat("if");
 
+    // The `const reference` to o_command_start may refer to
+    // `this->_last_o_word` which may change during recursively
+    // calling `this->statementList()`. 
+    // So I make a copy here, and finally use std::move() to construct
+    // it into the AstObject's { "oIfCommand", std::move(if_o_command) }
+    // For example, if we don't copy here, when this oIfStatement is called
+    // by an oIfStatement() function itself, that is, in an `elseif`,
+    // we get a `o_command_start` which is bound to this->_last_o_word,
+    // when we skip out and eat an `endif`, this->_last_o_word will change
+    // to the o-word in front of `endif`, this time, `o_command_start` also
+    // changes !! 
     auto if_o_command = o_command_start;
 
     auto&& test = this->parenthesizedExpression();
@@ -196,17 +226,51 @@ AstObject Parser::oIfStatement(const AstObject &o_command_start, bool should_eat
     AstArray o_word_list; 
     // o_word_list.emplace_back(o_command_start);
 
+    // tell the statementList
+    // when encounter an oStatement and the next is else, elseif or endif
+    // stop generating list, with an pre-o-word eaten now,
+    // so we need to collect this eaten o-word later from this->_last_o_word
     auto&& consequent = this->statementList({{"else", "elseif", "endif"}});
+
+    /**
+     * About how to deal with `elseif`:
+     * 
+     * o1 if [#1]
+     * o1 elseif [#2]
+     * o1 elseif [#3]
+     * o1 else
+     * o1 endif
+     * 
+     * I expand the `elseif` in the above oIfStatement 
+     * as a special `alternate`, which is also an oIfStatement
+     * ==>
+     * 
+     * o1 if [#1]
+     * o1 else
+     *      o1 if [#2]
+     *          o1 if [#3]
+     *          o1 else
+     *          o1 endif
+     */
 
     // elseif
     if (!this->_lookahead.empty() 
         && Tokenizer::GetTokenType(this->_lookahead) == "elseif") {
+        // if next is elseif, eat an `elseif`
         this->eat("elseif");
         
         // _last_o_word here is the o-word in front of this `elseif`
-        o_word_list.emplace_back(_last_o_word);
-        auto&& sub_o_if_statement = this->oIfStatement(_last_o_word, false);
+        o_word_list.emplace_back(this->_last_o_word);
+ 
+        // without eating an if, get an ifStatement recursively
+        // pass the false, means not to eat if at the start of the function
+        auto&& sub_o_if_statement = this->oIfStatement(this->_last_o_word, false);
 
+        // directly returns an ifStatement here,
+        // because there will only be an `endif` in the whole if-block,
+        // and we will deal with the maybe-incoming `else` in the sub_o_if_statement,
+        // so we don't have to eat another `endif` or `else` after 
+        // getting this sub_o_if_statement .
         return AstObject{
             {"type", "oIfStatement"},
             {"ifOCommand", std::move(if_o_command)},
@@ -217,19 +281,20 @@ AstObject Parser::oIfStatement(const AstObject &o_command_start, bool should_eat
         };
     }
 
-    AstArray alternate;
     // else
+    AstArray alternate; // alternate is the `else` 's statementList
     if (!this->_lookahead.empty() 
         && Tokenizer::GetTokenType(this->_lookahead) == "else") {
+        // if next is else, eat an `else`
         this->eat("else");
 
         // _last_o_word here is the o-word in front of this `else`
-        o_word_list.emplace_back(_last_o_word);
+        o_word_list.emplace_back(this->_last_o_word);
         alternate = this->statementList({{"endif"}});
     }
 
     // _last_o_word here is the o-word in front of this `endif`
-    o_word_list.emplace_back(_last_o_word);
+    o_word_list.emplace_back(this->_last_o_word);
     this->eat("endif");
     
     if (!this->_lookahead.empty()) this->eat("RTN");
@@ -306,11 +371,12 @@ AstObject Parser::assignmentExpression(bool must_be_assignment/* = false*/)
         // if must_be_assignment, throw SyntaxError here
         if (must_be_assignment) {
             std::cout << util::BacktraceToString(100) << std::endl;
-            _ss << this->_tokenizer->getLineColumnShowString()
-                << "\nMust be assignment expression here, but no assignment operator,"
-                << " next token is:\n"
-                << Tokenizer::GetTokenTypeValueShowString(this->_lookahead);
-            throw SyntaxError(_ss.str());
+            std::stringstream ss;
+            ss << this->_tokenizer->getLineColumnShowString()
+               << "\nMust be assignment expression here, but no assignment operator,"
+               << " next token is:\n"
+               << Tokenizer::GetTokenTypeValueShowString(this->_lookahead);
+            throw SyntaxError(ss.str());
         }
         
         // if next token is not an assign operator
@@ -532,12 +598,13 @@ TokenValue Parser::eat(const TokenType &token_type)
     // lookahead's type != the given eating token_type
     if (token_type_opt.value() != token_type) {
         std::cout << rs274letter::util::BacktraceToString(100) << std::endl;
-        _ss << "Unexpected token:\n"
-            << Tokenizer::GetTokenTypeValueShowString(token)
-            << "\nexpected:\n" 
-            << "type: " << token_type
-            << "\n" << this->_tokenizer->getLineColumnShowString();
-        throw SyntaxError(_ss.str());
+        std::stringstream ss;
+        ss << "Unexpected token:\n"
+           << Tokenizer::GetTokenTypeValueShowString(token)
+           << "\nexpected:\n" 
+           << "type: " << token_type
+           << "\n" << this->_tokenizer->getLineColumnShowString();
+        throw SyntaxError(ss.str());
     }
 
     // lookahead the next token
@@ -559,8 +626,9 @@ const AstValue& Parser::IsValidAssignmentTarget(const AstValue &ast_value)
     if (type == "numberIndexVariable" || type == "nameIndexVariable") {
         return ast_value;
     } else {
-        _ss << "Invalid assignment target on the lhs, target: " << ast_value.to_string();
-        throw SyntaxError(_ss.str());
+        std::stringstream ss;
+        ss << "Invalid assignment target on the lhs, target: " << ast_value.to_string();
+        throw SyntaxError(ss.str());
     }
 }
 

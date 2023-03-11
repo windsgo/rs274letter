@@ -2,4 +2,5 @@
 
 # This script is used on linux, to simply run a test
 
-build/tests/general_test input.ngc
+# test if elseif else endif
+build/tests/general_test tests/input/test_if.ngc

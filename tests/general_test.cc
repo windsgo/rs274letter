@@ -13,12 +13,13 @@ int main(int argc, char** argv) {
 
     std::string code = 
     R"( o1 if[2]
-o222 elseif [#2 = 1]
-o<aa> endif
+        o222 elseif [#2 = 1]
+        o<aa> endif
     )";
 
+    const char* file_name = nullptr;
     if (argc > 1) {
-        auto file_name = argv[1];
+        file_name = argv[1];
 
         std::ifstream ifs(file_name, std::ios_base::in);
         
@@ -26,6 +27,8 @@ o<aa> endif
             std::stringstream ss;
             ss << ifs.rdbuf();
             code = ss.str();
+        } else {
+            file_name = nullptr;
         }
 
         ifs.close();
@@ -39,13 +42,15 @@ o<aa> endif
     // }
 
     try {
+
+        // test getNextToken()
         while(t->hasMoreTokens()) {
             auto&& token = t->getNextToken();
             if (!token.empty())
                 std::cout << "line:" << t->getCurLine() << token.to_string() << std::endl;
         }
 
-
+        // test parsing
         auto v = Parser::parse(code);
         std::cout << v.format(true, "  ", 0) << std::endl;
 

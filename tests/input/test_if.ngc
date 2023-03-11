@@ -3,6 +3,10 @@ o222 elseif [#2 = 1]
     o2 if [1]
     o3 else
     o4 endif
+o222 elseif [#<name> = 233]
+    o999 if [2]
+    o888 elseif [3]
+    o777 endif
 o#123 else    
     #1 = [1 + 1 * 2]
 o<aa> endif
