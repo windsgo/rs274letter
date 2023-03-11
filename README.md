@@ -86,21 +86,18 @@ we alse support `>` `<` `>=` `<=` `==` `!=` in `[...]` expressions.
 
 - if
 
-    I use a cleaner way to write if statements, with no explictly o-words,
-    and of course, do not support o-word if-statement.
-    
-    I think that's useless and very complex.
+    Example:
 
     ```
-    if [ #2 > 1 ] 
+    #123 = 1
+    o1 if [ #2 > 1 ] 
         G01 X1
-    elseif [ #2 < -1 ]
+    o1 elseif [ #2 < -1 ]
         G01 X-1
-    else
+    o#123 else
         G01 Y1
-    endif
+    o1 endif
     ```
 
-    About how to implement the `elseif` logic, I decide to recursively get the `ifStatement`
-    with an `should_eat_if` para to tell whether should eat an `if` or not at the begining of
-    the parse of an `ifStatement`.
+    Note: we will examine whether these o-words are the same for an if statement,
+    but we do not rely on this rule to parse an if statement.

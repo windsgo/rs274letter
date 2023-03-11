@@ -57,8 +57,8 @@ private:
      * A statementList is an array of statement:
      *  : statementList statement -> statement ... statement statement
     */
-    AstArray statementList(const std::optional<std::vector<TokenType>>& stop_lookahead_tokentypes = std::nullopt);
-
+    AstArray statementList(const std::optional<std::vector<TokenType>>& stop_lookahead_tokentypes_after_o = std::nullopt);
+    
     /**************************/
     /*****    Statement    ****/
     /**************************/
@@ -101,8 +101,9 @@ private:
      *  : oCallStatement
      *  | oIfStatement 
      *  ;
+     * if given pre_o_word, it will not eat an oCommand inside the function
     */
-    AstObject oCommandStatement();
+    AstObject oCommandStatement(const std::optional<AstObject> pre_o_word = std::nullopt);
 
     /**
      * an oCallStatement is:
@@ -112,12 +113,12 @@ private:
     AstObject oCallStatement(const AstObject& o_command_start);
     
     /**
-     * an ifStatement is:
-     *  : if parenthesizedExpression "RTN" opt-statementList endif
-     *  | if parenthesizedExpression "RTN" opt-statementList else statementList endif
+     * an oIfStatement is:
+     *  : (pre-oCommand) if parenthesizedExpression "RTN" opt-statementList endif
      *  ;
-    */
-    AstObject ifStatement(bool should_eat_if = true);
+     */
+    AstObject oIfStatement(const AstObject& o_command_start,
+        bool should_eat_if = true);
 
     /**
      * A commandNumberGroupList is an array of commandNumberGroup:
@@ -283,6 +284,10 @@ private:
     std::unique_ptr<Tokenizer> _tokenizer;
 
     Token _lookahead;
+    
+    // store the last oCommand AstObject
+    // for sub flow control to save them
+    AstObject _last_o_word;
 
     inline static thread_local std::stringstream _ss{}; // used for output string
 };

@@ -74,21 +74,29 @@ static bool _is_lookahead_stoptokentypes(const Token& lookahead, std::vector<Tok
     return false;
 }
 
-AstArray Parser::statementList(const std::optional<std::vector<TokenType>>& stop_lookahead_tokentypes /*= std::nullopt*/)
-{
+AstArray Parser::statementList(const std::optional<std::vector<TokenType>>& stop_lookahead_tokentypes_after_o /*= std::nullopt*/) {
     AstArray statement_list;
 
-    // statement_list.emplace_back(this->statement());
     while(!this->_lookahead.empty()) {
-        if (stop_lookahead_tokentypes && _is_lookahead_stoptokentypes(this->_lookahead, 
-            stop_lookahead_tokentypes.value_or(std::vector<TokenType>()))) {
-            break;
+        if (Tokenizer::GetTokenType(this->_lookahead) != "O") {
+            // Not a statement(line) start with 'O'
+            auto&& statement = this->statement();
+            if (!statement.empty()) {
+                statement_list.emplace_back(statement);
+            }
+            continue; // next statement
         }
-        
-        // stop_lookahead_tokentype 是指结束查找语句的标识，如块语句从'{'查找到下一个'}'为止
-        auto&& statement = this->statement();
-        if (!statement.empty())
-            statement_list.emplace_back(statement);
+
+        // statement starts with an O
+        auto&& o_word = this->oCommand();
+        if (stop_lookahead_tokentypes_after_o 
+            && _is_lookahead_stoptokentypes(this->_lookahead, 
+            stop_lookahead_tokentypes_after_o.value_or(std::vector<TokenType>()))) {
+            _last_o_word = std::move(o_word);
+            break;
+        } else {
+            statement_list.emplace_back(this->oCommandStatement(o_word));
+        }
     }
 
     return statement_list;
@@ -105,9 +113,8 @@ AstObject Parser::statement()
         return this->commandStatement();
     } else if (lookahead_type == "O") {
         return this->oCommandStatement();
-    } else if (lookahead_type == "if") {
-        return this->ifStatement();
-    } else { // TODO
+    } 
+    else { // TODO
         return this->expressionStatement(); 
     }
 }
@@ -149,16 +156,20 @@ AstObject Parser::expressionStatement()
     };
 }
 
-AstObject Parser::oCommandStatement()
+AstObject Parser::oCommandStatement(const std::optional<AstObject> pre_o_word/* = std::nullopt*/)
 {
-    auto&& o_command_start = this->oCommand();
+    // given the pre_o_word or not ?
+    auto&& o_command_start = pre_o_word ? pre_o_word.value() : this->oCommand();
+    RS274LETTER_ASSERT(
+        o_command_start.at("type").as_string() == "nameIndexOCommand" || 
+        o_command_start.at("type").as_string() == "numberIndexOCommand");
 
     auto&& next_type_after_o = Tokenizer::GetTokenType(this->_lookahead);
 
     if (next_type_after_o == "call") {
         return this->oCallStatement(o_command_start);
     } else if (next_type_after_o == "if") {
-        throw SyntaxError("No need to use o-word in front of `if`");
+        return this->oIfStatement(o_command_start);
     } else {
         std::cout << util::BacktraceToString(100) << std::endl;
         throw SyntaxError("Unexpected token type after oCommand: " + next_type_after_o);
@@ -170,45 +181,66 @@ AstObject Parser::oCallStatement(const AstObject &o_command_start)
     return AstObject(); // TODO
 }
 
-AstObject Parser::ifStatement(bool should_eat_if/* = true*/)
+AstObject Parser::oIfStatement(const AstObject &o_command_start, bool should_eat_if/* = true*/)
 {
     if (should_eat_if) this->eat("if");
+
+    auto if_o_command = o_command_start;
+
     auto&& test = this->parenthesizedExpression();
     this->eat("RTN");
 
-    auto&& consequent = this->statementList({{"endif", "else", "elseif"}});
+    // `o_word_list` is used to collect the o-words written for this whole 
+    // `oIfStatement`, we will examine whether these o-words are the same 
+    // value as each other in the future, to meet rs274 standard
+    AstArray o_word_list; 
+    // o_word_list.emplace_back(o_command_start);
 
-    AstArray alternate;
+    auto&& consequent = this->statementList({{"else", "elseif", "endif"}});
+
     // elseif
-    if (!this->_lookahead.empty() && Tokenizer::GetTokenType(this->_lookahead) == "elseif") {
+    if (!this->_lookahead.empty() 
+        && Tokenizer::GetTokenType(this->_lookahead) == "elseif") {
         this->eat("elseif");
         
-        // an if statement that doesn't eat `if` 
-        auto&& sub_if_statement = this->ifStatement(false); 
-        
+        // _last_o_word here is the o-word in front of this `elseif`
+        o_word_list.emplace_back(_last_o_word);
+        auto&& sub_o_if_statement = this->oIfStatement(_last_o_word, false);
+
         return AstObject{
-            {"type", "ifStatement"},
+            {"type", "oIfStatement"},
+            {"ifOCommand", std::move(if_o_command)},
             {"test", test},
             {"consequent", consequent},
-            {"alternate", sub_if_statement}
+            {"alternate", sub_o_if_statement},
+            {"otherWordsList", std::move(o_word_list)}
         };
     }
 
+    AstArray alternate;
     // else
-    if (!this->_lookahead.empty() && Tokenizer::GetTokenType(this->_lookahead) == "else") {
+    if (!this->_lookahead.empty() 
+        && Tokenizer::GetTokenType(this->_lookahead) == "else") {
         this->eat("else");
+
+        // _last_o_word here is the o-word in front of this `else`
+        o_word_list.emplace_back(_last_o_word);
         alternate = this->statementList({{"endif"}});
     }
 
+    // _last_o_word here is the o-word in front of this `endif`
+    o_word_list.emplace_back(_last_o_word);
     this->eat("endif");
     
     if (!this->_lookahead.empty()) this->eat("RTN");
 
     return AstObject{
-        {"type", "ifStatement"},
+        {"type", "oIfStatement"},
+        {"ifOCommand", std::move(if_o_command)},
         {"test", test},
         {"consequent", consequent},
-        {"alternate", std::move(alternate)}
+        {"alternate", std::move(alternate)},
+        {"otherWordsList", std::move(o_word_list)}
     };
 }
 

@@ -12,31 +12,9 @@ using namespace rs274letter;
 int main(int argc, char** argv) {
 
     std::string code = 
-    R"( G1 x-30 Y-[2.9+#2] Z+#<var> A123
-        ; 1+1 ; not valid
-        #1=[#2-2]
-        #2=[2+#3*[1.2+#<aa>]]
-        ##2=[#[##3*2]+#<_a>*#7]
-        #<_abc_> = -1
-        #2 = +##2 
-
-        if [1]
-            ;if [#1 = 1] ; support empty if statement
-
-                ;#1 = 2
-            ;endif
-
-            ;if [0]
-
-            ;endif
-        elseif [123]
-        
-            #233 = 233
-
-        else
-            1
-            #1 = 2
-        endif
+    R"( o1 if[2]
+o222 elseif [#2 = 1]
+o<aa> endif
     )";
 
     if (argc > 1) {
