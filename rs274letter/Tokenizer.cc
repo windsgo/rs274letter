@@ -45,7 +45,8 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     XX(R"(^\belseif\b|^\bELSEIF\b)", "elseif"),  // elseif 
     XX(R"(^\belse\b|^\bELSE\b)", "else"),  // else 
 
-
+    // use (?=[\-\+\[#\.0-9])) to specify that the next char after `LETTER` should 
+    // be either -, +, [, #, . or 0-9
     XX(R"(^[oO])", "O"), // control command letter "o" / "O", above all letters
 
     /*
@@ -66,8 +67,13 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     //   We will examine whether a normal CommandStatement is Environmentally correct
     // in the Executer when we examine the result which is provided by the Parser
 
-    XX(R"(^[a-zA-Z])", "LETTER"),
+    // use (?![a-zA-Z]) to specify that the next char after `LETTER` should not be
+    // a letter again
+    XX(R"(^[a-zA-Z](?![a-zA-Z]))", "LETTER"),
 
+    // use (?=[\-\+\[#\.0-9])) to specify that the next char after `LETTER` should 
+    // be either -, +, [, #, . or 0-9
+    // XX(R"(^[a-zA-Z](?=[\-\+\[#\.0-9]))", "LETTER"),
 
     // Variable Operations
     XX(R"(^#)", "#"),               // #, variable pre Identifier
@@ -75,10 +81,11 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     XX(R"(^<\w+>)", "VAR_NAME"),    // variable name <_var_name_>
 
     // Numerical Literals
-    // XX(R"(^[+-]?\d+\.\d*|^[+-]?\d*\.\d+)", "DOUBLE"), // DOUBLE should be higher than INTEGER, support 01.00 / 01. / .01
-    // XX(R"(^[+-]?\d+)", "INTEGER"),
     XX(R"(^\d+\.\d*|^\d*\.\d+)", "DOUBLE"), // DOUBLE should be higher than INTEGER, support 01.00 / 01. / .01
     XX(R"(^\d+)", "INTEGER"),
+
+    // Relational Operations
+    XX(R"(^[><]=?|^[gl][te]|^[GL][TE])", "RELATIONAL_OPERATOR"),
 
     // Binary Expression
     XX(R"(^[\+\-])", "ADDITIVE_OPERATOR"), // "+" or "-"

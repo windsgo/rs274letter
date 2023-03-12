@@ -184,6 +184,8 @@ private:
      * This returns the operator as a string, currently must be "=", or throw exception.
     */
     TokenValue assignmentOperator();
+
+    AstObject relationalExpression();
     
     /**
      * An additiveExpression maybe:

@@ -17,6 +17,11 @@ target_compile_definitions(rs274letter PRIVATE NO_SINGLE_NON_ASSIGN_EXPRESSION)
 # 不允许赋值表达式右侧非primary expression, 如#1 = #2 + 1为非法，需写为#1 = [#2 + 1]
 target_compile_definitions(rs274letter PRIVATE MUST_PRIMARY_RIGHT_HANDSIDE_OF_ASSIGN)
 
+# 在o和#后面跟的直接指定为primaryExpression，即允许跟正负号+/-，允许跟字面浮点数(检查时再计算其是否
+# 符合tolerance，符合退化为整数)
+target_compile_definitions(rs274letter PRIVATE NAMEINDEX_JUST_PRIMARYEXPRESSION)
+
+
 target_include_directories(rs274letter PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third_party/meojson/include>

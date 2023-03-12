@@ -78,8 +78,8 @@ The number-indexed `#...` rules is the same as o-words `o...`.
 
 ### compare operator
 
-Other than the traditional `gt` `lt` `eq` `ne` `ge` `le`,
-we alse support `>` `<` `>=` `<=` `==` `!=` in `[...]` expressions.
+Having the traditional `gt` `lt` `eq` `ne` `ge` `le`,
+I decided to ***temporarily*** support `>` `<` `>=` `<=` `==` `!=` in `[...]` expressions, because it might conflict the usage of `#<var>`.
 
 
 ### if, while, do-while, func

@@ -365,7 +365,8 @@ AstObject Parser::expression(bool must_be_assignment/* = false*/)
 
 AstObject Parser::assignmentExpression(bool must_be_assignment/* = false*/)
 {
-    auto&& left = this->additiveExpression();
+    // auto&& left = this->additiveExpression();
+    auto&& left = this->relationalExpression();
 
     if (!this->IsAssignmentOperator(this->_lookahead)) {
         // if must_be_assignment, throw SyntaxError here
@@ -400,6 +401,27 @@ AstObject Parser::assignmentExpression(bool must_be_assignment/* = false*/)
 TokenValue Parser::assignmentOperator()
 {
     return this->eat("ASSIGN_OPERATOR");
+}
+
+AstObject Parser::relationalExpression()
+{
+    auto&& left = this->additiveExpression();
+
+    while (Tokenizer::GetTokenType(this->_lookahead) == "RELATIONAL_OPERATOR") {
+        auto&& op = this->eat("RELATIONAL_OPERATOR"); // eat the operator
+        auto&& right = this->additiveExpression(); // get the right hand side expression
+
+        // make the original left, be the "left-hand-side" of new left, 
+        // since the original left found a right-hand-side expression
+        left = AstObject{
+            {"type", "binaryExpression"},
+            {"operator", op},
+            {"left", left},
+            {"right", right}
+        };
+    }
+
+    return left;
 }
 
 AstObject Parser::additiveExpression()
@@ -525,7 +547,10 @@ std::string Parser::nameIndex()
 }
 
 AstValue Parser::numberIndex()
-{
+{   
+#ifdef NAMEINDEX_JUST_PRIMARYEXPRESSION
+    return this->primaryExpression();
+#else // NOT NAMEINDEX_JUST_PRIMARYEXPRESSION
     auto&& type = Tokenizer::GetTokenType(this->_lookahead);
 
     if (type == "INTEGER") {
@@ -539,6 +564,7 @@ AstValue Parser::numberIndex()
     } else {
         throw SyntaxError("Unexpected variable index type: " + type);
     }
+#endif // NAMEINDEX_JUST_PRIMARYEXPRESSION
 }
 
 AstObject Parser::numericLiteral()
