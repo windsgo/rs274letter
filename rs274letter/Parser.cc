@@ -314,7 +314,7 @@ AstArray Parser::commandNumberGroupList()
     AstArray command_number_group_list;
 
     command_number_group_list.emplace_back(this->commandNumberGroup());
-    while(Tokenizer::GetTokenType(this->_lookahead) != "RTN") {
+    while(!this->_lookahead.empty() && Tokenizer::GetTokenType(this->_lookahead) != "RTN") {
         command_number_group_list.emplace_back(this->commandNumberGroup());
     }
 

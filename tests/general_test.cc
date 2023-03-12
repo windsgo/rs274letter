@@ -12,10 +12,8 @@ using namespace rs274letter;
 int main(int argc, char** argv) {
 
     std::string code = 
-    R"( o1 if[2]
-        o222 elseif [#2 = 1]
-        o<aa> endif
-    )";
+    R"( 
+        E001)";
 
     const char* file_name = nullptr;
     if (argc > 1) {
