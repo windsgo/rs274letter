@@ -40,14 +40,14 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     // Control Flow
     // should be above LETTER
     XX(R"(^\bcall\b|^\bCALL\b)", "call"), // o... call
+
+    // if related keywords
     XX(R"(^\bif\b|^\bIF\b)", "if"),  // if 
     XX(R"(^\bendif\b|^\bENDIF\b)", "endif"),  // endif 
     XX(R"(^\belseif\b|^\bELSEIF\b)", "elseif"),  // elseif 
     XX(R"(^\belse\b|^\bELSE\b)", "else"),  // else 
 
-    // use (?=[\-\+\[#\.0-9])) to specify that the next char after `LETTER` should 
-    // be either -, +, [, #, . or 0-9
-    XX(R"(^[oO])", "O"), // control command letter "o" / "O", above all letters
+    XX(R"(^[oO](?![a-zA-Z_]))", "O"), // control command letter "o" / "O", above all letters
 
     /*
     // Commands
@@ -68,12 +68,8 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     // in the Executer when we examine the result which is provided by the Parser
 
     // use (?![a-zA-Z]) to specify that the next char after `LETTER` should not be
-    // a letter again
-    XX(R"(^[a-zA-Z](?![a-zA-Z]))", "LETTER"),
-
-    // use (?=[\-\+\[#\.0-9])) to specify that the next char after `LETTER` should 
-    // be either -, +, [, #, . or 0-9
-    // XX(R"(^[a-zA-Z](?=[\-\+\[#\.0-9]))", "LETTER"),
+    // a letter or _ 
+    XX(R"(^[a-zA-Z](?![a-zA-Z_]))", "LETTER"),
 
     // Variable Operations
     XX(R"(^#)", "#"),               // #, variable pre Identifier

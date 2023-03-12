@@ -207,11 +207,8 @@
       },
       "otherWordsList": [
         {
-          "index": {
-            "type": "integerNumericLiteral",
-            "value": 1
-          },
-          "type": "numberIndexOCommand"
+          "index": "a",
+          "type": "nameIndexOCommand"
         }
       ],
       "test": {

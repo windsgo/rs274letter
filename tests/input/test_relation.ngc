@@ -2,5 +2,5 @@ o1 if [#<abc> > 1]
     #1 = [2 >= 1]
     #<two> = [1 le 3]
     #[2+1] = [1 GT [#5 = 1]]
-    G12X-1Y+2.1Z#1A-#<abc>B-[#1]C.1
-o1 endif
+    G12X -1Y+2.1Z#1A-#<abc>B-[#1]C.1
+o<a> endif
