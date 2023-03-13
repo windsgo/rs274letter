@@ -7,7 +7,7 @@ namespace rs274letter {
 
 class Exception : std::exception {
 protected:
-    std::string _str;
+    mutable std::string _str;
 
 public:
     Exception(std::string str) : _str(str) {}

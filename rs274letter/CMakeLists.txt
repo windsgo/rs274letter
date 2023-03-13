@@ -2,6 +2,7 @@ add_library(rs274letter SHARED
     Tokenizer.cc
     Parser.cc
     util.cc
+    Serializer.cc
 )
 
 find_package(Boost)
@@ -21,6 +22,10 @@ target_compile_definitions(rs274letter PRIVATE MUST_PRIMARY_RIGHT_HANDSIDE_OF_AS
 # 符合tolerance，符合退化为整数)
 target_compile_definitions(rs274letter PRIVATE NAMEINDEX_JUST_PRIMARYEXPRESSION)
 
+# 引用到number_index variable时如果未定义就抛出异常，否则返回0
+target_compile_definitions(rs274letter PRIVATE NUMBERINDEX_VARIABLE_UNDEFINED_ERROR)
+# 引用到name_index variable时如果未定义就抛出异常，否则返回0
+target_compile_definitions(rs274letter PRIVATE NAMEINDEX_VARIABLE_UNDEFINED_ERROR)
 
 target_include_directories(rs274letter PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>

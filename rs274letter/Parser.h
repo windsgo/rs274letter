@@ -16,9 +16,9 @@ class SyntaxError : public Exception {
 public:
     SyntaxError(const std::string& str) : Exception(str) { }
     virtual const char* what() const noexcept override {
-        static std::string str
+        _str
             = "RS274Exception: SyntaxError:\n" + _str;
-        return str.c_str();
+        return _str.c_str();
     }
 };
 
