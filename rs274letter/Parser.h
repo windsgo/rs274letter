@@ -100,6 +100,7 @@ private:
      * An oCommandStatement may be:
      *  : oCallStatement
      *  | oIfStatement 
+     *  | oSubStatement
      *  ;
      * if given pre_o_word, it will not eat an oCommand inside the function
     */
@@ -107,19 +108,41 @@ private:
 
     /**
      * an oCallStatement is:
-     *  : (o_command_start) call optParenthesizedExpressionList "RTN"
+     *  : (pre-oCommand) call oCallParamList "RTN"
      *  ;
     */
     AstObject oCallStatement(const AstObject& o_command_start);
+
+    /**
+     * an oReturnStatement is:
+     *  : (pre-oCommand) return opt-parenthesizedExpression "RTN"
+     *  ;
+    */
+    AstObject oReturnStatement(const AstObject& o_command_start);
+
+    /**
+     * an oCallParamList is:
+     *  : parenthesizedExpression parenthesizedExpression ... parenthesizedExpression
+     *  ;
+    */
+    AstArray oCallParamList();
     
     /**
      * an oIfStatement is:
-     *  : (pre-oCommand) if parenthesizedExpression "RTN" opt-statementList endif
-     *  | (pre-oCommand) if parenthesizedExpression "RTN" opt-statementList oCommand  endif
+     *  : (pre-oCommand) if parenthesizedExpression "RTN" opt-statementList endif "RTN"
+     *  | (pre-oCommand) if parenthesizedExpression "RTN" opt-statementList oCommand endif "RTN"
      *  ;
      */
     AstObject oIfStatement(const AstObject& o_command_start,
         bool should_eat_if = true);
+
+    /**
+     * an oSubStatement is:
+     *  : (pre-oCommand) sub "RTN" opt-statementList endsub "RTN"
+     *  ;
+     * Do not allow nested oSubStatement
+    */
+    AstObject oSubStatement(const AstObject& o_command_start);
 
     /**
      * A commandNumberGroupList is an array of commandNumberGroup:
@@ -295,6 +318,9 @@ private:
     // that `_last_o_word` may change during the call of this->statementList()
     // the reference bound to it may potentially change !
     AstObject _last_o_word;
+
+    // used to examine if `o... return` is used in an `o... sub`
+    bool _parsing_o_sub = false;
 };
 
 } // namespace rs274letter

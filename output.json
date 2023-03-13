@@ -1,64 +1,161 @@
 {
   "body": [
     {
-      "alternate": {
-        "alternate": [
-        ],
-        "consequent": [
-        ],
-        "ifOCommand": {
-          "index": {
-            "type": "integerNumericLiteral",
-            "value": 222
-          },
-          "type": "numberIndexOCommand"
-        },
-        "otherWordsList": [
-          {
-            "index": "aa",
-            "type": "nameIndexOCommand"
-          }
-        ],
-        "test": {
-          "left": {
-            "index": {
+      "body": [
+        {
+          "expression": {
+            "left": {
+              "index": {
+                "type": "integerNumericLiteral",
+                "value": 1
+              },
+              "type": "numberIndexVariable"
+            },
+            "operator": "=",
+            "right": {
               "type": "integerNumericLiteral",
               "value": 2
             },
-            "type": "numberIndexVariable"
+            "type": "assignmentExpression"
           },
-          "operator": "=",
-          "right": {
+          "type": "expressionStatement"
+        },
+        {
+          "alternate": {
+            "alternate": [
+            ],
+            "consequent": [
+            ],
+            "ifOCommand": {
+              "index": {
+                "type": "integerNumericLiteral",
+                "value": 1
+              },
+              "type": "numberIndexOCommand"
+            },
+            "otherWordsList": [
+              {
+                "index": {
+                  "type": "integerNumericLiteral",
+                  "value": 1
+                },
+                "type": "numberIndexOCommand"
+              },
+              {
+                "index": {
+                  "type": "integerNumericLiteral",
+                  "value": 1
+                },
+                "type": "numberIndexOCommand"
+              }
+            ],
+            "test": {
+              "type": "integerNumericLiteral",
+              "value": 2
+            },
+            "type": "oIfStatement"
+          },
+          "consequent": [
+            {
+              "returnOCommand": {
+                "index": {
+                  "type": "integerNumericLiteral",
+                  "value": 100
+                },
+                "type": "numberIndexOCommand"
+              },
+              "returnRtnExpr": {
+                "type": "integerNumericLiteral",
+                "value": 1
+              },
+              "type": "oReturnStatement"
+            }
+          ],
+          "ifOCommand": {
+            "index": {
+              "type": "integerNumericLiteral",
+              "value": 1
+            },
+            "type": "numberIndexOCommand"
+          },
+          "otherWordsList": [
+            {
+              "index": {
+                "type": "integerNumericLiteral",
+                "value": 1
+              },
+              "type": "numberIndexOCommand"
+            }
+          ],
+          "test": {
             "type": "integerNumericLiteral",
             "value": 1
           },
-          "type": "assignmentExpression"
+          "type": "oIfStatement"
         },
-        "type": "oIfStatement"
-      },
-      "consequent": [
+        {
+          "returnOCommand": {
+            "index": {
+              "type": "integerNumericLiteral",
+              "value": 100
+            },
+            "type": "numberIndexOCommand"
+          },
+          "returnRtnExpr": {
+            "left": {
+              "type": "integerNumericLiteral",
+              "value": 1
+            },
+            "operator": "*",
+            "right": {
+              "type": "integerNumericLiteral",
+              "value": 2
+            },
+            "type": "binaryExpression"
+          },
+          "type": "oReturnStatement"
+        }
       ],
-      "ifOCommand": {
-        "index": {
+      "endsubRtnExpr": {
+        "left": {
+          "type": "integerNumericLiteral",
+          "value": 2
+        },
+        "operator": "+",
+        "right": {
           "type": "integerNumericLiteral",
           "value": 1
         },
+        "type": "binaryExpression"
+      },
+      "subOCommand": {
+        "index": {
+          "type": "integerNumericLiteral",
+          "value": 100
+        },
         "type": "numberIndexOCommand"
       },
-      "otherWordsList": [
+      "type": "oSubStatement"
+    },
+    {
+      "callOCommand": {
+        "index": {
+          "type": "integerNumericLiteral",
+          "value": 100
+        },
+        "type": "numberIndexOCommand"
+      },
+      "paramList": [
         {
-          "index": {
-            "type": "integerNumericLiteral",
-            "value": 222
-          },
-          "type": "numberIndexOCommand"
+          "type": "integerNumericLiteral",
+          "value": 0
+        },
+        {
+          "type": "integerNumericLiteral",
+          "value": 2
         }
       ],
-      "test": {
-        "type": "integerNumericLiteral",
-        "value": 2
-      },
-      "type": "oIfStatement"
+      "type": "oCallStatement"
     }
   ],
   "type": "program"

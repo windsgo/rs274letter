@@ -47,6 +47,12 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     XX(R"(^\belseif\b|^\bELSEIF\b)", "elseif"),  // elseif 
     XX(R"(^\belse\b|^\bELSE\b)", "else"),  // else 
 
+    // sub related keywords
+    XX(R"(^\bsub\b|^\bSUB\b)", "sub"),
+    XX(R"(^\breturn\b|^\bRETURN\b)", "return"),
+    XX(R"(^\bendsub\b|^\bENDSUB\b)", "endsub"),
+    
+
     XX(R"(^[oO](?![a-zA-Z_]))", "O"), // control command letter "o" / "O", above all letters
 
     /*

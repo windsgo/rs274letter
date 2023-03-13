@@ -188,6 +188,10 @@ AstObject Parser::oCommandStatement(const std::optional<AstObject> pre_o_word/* 
         return this->oCallStatement(o_command_start);
     } else if (next_type_after_o == "if") {
         return this->oIfStatement(o_command_start);
+    } else if (next_type_after_o == "sub") {
+        return this->oSubStatement(o_command_start);
+    } else if (next_type_after_o == "return") {
+        return this->oReturnStatement(o_command_start);
     } else {
         std::cout << util::BacktraceToString(100) << std::endl;
         throw SyntaxError("Unexpected token type after oCommand: " + next_type_after_o);
@@ -196,7 +200,55 @@ AstObject Parser::oCommandStatement(const std::optional<AstObject> pre_o_word/* 
 
 AstObject Parser::oCallStatement(const AstObject &o_command_start)
 {
-    return AstObject(); // TODO
+    this->eat("call");
+    auto call_o_command = o_command_start;
+
+    auto&& param_list = this->oCallParamList();
+
+    if (!this->_lookahead.empty()) this->eat("RTN");
+    
+    return AstObject{
+        {"type", "oCallStatement"},
+        {"callOCommand", std::move(call_o_command)},
+        {"paramList", param_list}
+    };
+}
+
+AstObject Parser::oReturnStatement(const AstObject &o_command_start)
+{
+    if (this->_parsing_o_sub == false) {
+        std::stringstream ss;
+        ss << "o-return statement should be in a sub-statement\n"
+           << this->_tokenizer->getLineColumnShowString();
+        throw SyntaxError(ss.str());
+    }
+
+    this->eat("return");
+    auto return_o_command = o_command_start;
+
+    AstObject return_expression;
+    if (!this->_lookahead.empty() 
+        && Tokenizer::GetTokenType(this->_lookahead) == "[") {
+        return_expression = this->parenthesizedExpression();
+    }
+    
+    return AstObject{
+        {"type", "oReturnStatement"},
+        {"returnOCommand", std::move(return_o_command)},
+        {"returnRtnExpr", std::move(return_expression)}
+    };
+}
+
+AstArray Parser::oCallParamList()
+{
+    AstArray param_list;
+
+    while (!this->_lookahead.empty() 
+        && Tokenizer::GetTokenType(this->_lookahead) != "RTN") {
+        param_list.emplace_back(this->parenthesizedExpression());
+    }
+
+    return param_list;
 }
 
 AstObject Parser::oIfStatement(const AstObject &o_command_start, bool should_eat_if/* = true*/)
@@ -306,6 +358,53 @@ AstObject Parser::oIfStatement(const AstObject &o_command_start, bool should_eat
         {"consequent", consequent},
         {"alternate", std::move(alternate)},
         {"otherWordsList", std::move(o_word_list)}
+    };
+}
+
+AstObject Parser::oSubStatement(const AstObject &o_command_start)
+{   
+    RS274LETTER_ASSERT(this->_parsing_o_sub == false);
+    if (this->_parsing_o_sub == true) {
+        std::stringstream ss;
+        ss << "Internal Error, _parsing_o_sub should be false"
+           << _last_o_word.to_string() << "\n"
+           << this->_tokenizer->getLineColumnShowString();
+        throw SyntaxError(ss.str());
+    }
+    this->_parsing_o_sub = true; // marked as parsing sub start
+
+    this->eat("sub");
+    auto sub_o_command = o_command_start;
+
+    auto&& body = this->statementList({{"sub", "endsub"}});
+
+    // Do not allow nested o-sub !
+    if (!this->_lookahead.empty() 
+        && Tokenizer::GetTokenType(this->_lookahead) == "sub") {
+        std::stringstream ss;
+        ss << "Nested sub statement definition is not allowed:"
+           << _last_o_word.to_string() << "\n"
+           << this->_tokenizer->getLineColumnShowString();
+        throw SyntaxError(ss.str());
+    }
+
+    this->eat("endsub");
+
+    AstObject return_expression;
+    if (!this->_lookahead.empty() 
+        && Tokenizer::GetTokenType(this->_lookahead) == "[") {
+        return_expression = this->parenthesizedExpression();
+    }
+
+    if (!this->_lookahead.empty()) this->eat("RTN");
+
+    this->_parsing_o_sub = false; // marked as parsing sub end
+
+    return AstObject{
+        {"type", "oSubStatement"},
+        {"subOCommand", std::move(sub_o_command)},
+        {"body", body},
+        {"endsubRtnExpr", std::move(return_expression)}
     };
 }
 

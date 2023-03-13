@@ -82,7 +82,7 @@ Having the traditional `gt` `lt` `eq` `ne` `ge` `le`,
 I decided to ***temporarily*** support `>` `<` `>=` `<=` `==` `!=` in `[...]` expressions, because it might conflict the usage of `#<var>`.
 
 
-### if, while, do-while, func
+### if, while, do-while, sub
 
 - if
 
@@ -101,3 +101,48 @@ I decided to ***temporarily*** support `>` `<` `>=` `<=` `==` `!=` in `[...]` ex
 
     Note: we will examine whether these o-words are the same for an if statement,
     but we do not rely on this rule to parse an if statement.
+
+    Note: we may examine whether the numbered index of o-word is unique.
+
+- sub
+
+    #### sub, endsub
+
+    We will ***no longer*** support the M98, M99 call like below:
+
+    ```
+    o1
+    M98 P100 L2
+    M30
+
+    o100
+        G01 X1
+    M99
+    ```
+
+    which I think, is a poorly designed language pattern.
+
+    Instead, we use what is defined in linuxCNC rs274 like below:
+
+    ```
+    o100 sub
+
+        o2 if [#1]  (#1 is the argument passed by o100 call [1])
+    o100 return     (return to o100 call)
+        o2 endif
+
+        G01 X1
+
+    o100 endsub
+
+    o100 call [1]   (call o100 sub with one argument 1)
+
+    ```
+
+    In this pattern, the sub function should be defined **before** the `o-call`,
+    however, I might support afterwards define in the implement myself, this 
+    is to be done in the future.
+
+    #### call
+
+    Currently not support calling files.
