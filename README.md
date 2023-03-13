@@ -146,3 +146,49 @@ I decided to ***temporarily*** support `>` `<` `>=` `<=` `==` `!=` in `[...]` ex
     #### call
 
     Currently not support calling files.
+
+- while
+
+    I ***DO NOT*** support `do-while` structure, only `while-endwhile` structure
+    is implemented, for the reason that I hope to identify the code structure without
+    the help of o-word value.
+
+    Likewise, the o-break will only break the current loop, you ***CAN NOT*** break the
+    outside loop in an inside loop!
+
+    Note: It is tested in the original linuxcnc-sai that the o-break statement will break
+    all the loops, while here I hope to only break the current loop, which may seems to be
+    more meaningful and correct.
+
+    It strongly recommended not to nest while-loop, and use o-break and o-continue with the 
+    closest while-statement o-word.
+
+    ```
+    #1 = 10
+    G91 F1
+    o1 while [#1 lt 10]
+    
+        G01 X1
+        #1 = [#1 + 1]
+        
+        o2 if [#1 gt 5]
+
+    o1 break
+
+        o2 endif
+    
+    o1 endwhile
+    G90
+    M2
+    ```
+
+- repeat
+
+    ```
+    G91 F1
+    o1 repeat [1]
+        G01 X1
+    o1 endrepeat
+    G90
+    M2
+    ```

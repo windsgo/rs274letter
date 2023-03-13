@@ -1,0 +1,26 @@
+#1 = 0
+#3 = 0
+o1 while [#1 lt 10]
+    #1 = [#1 + 1]
+
+    o3 while [#3 lt 4]
+        #3 = [#3 + 1]
+        o3 break
+    o3 endwhile
+
+    o2 if [#1 lt 5]
+        o1 continue
+    o2 else
+        o1 break
+    o2 endif 
+
+    o1 continue
+
+    ; test repeat here
+
+G91
+o100 repeat [#2 + 5]
+    G01 X1
+o100 endrepeat
+
+o1 endwhile

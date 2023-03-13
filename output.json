@@ -1,6 +1,42 @@
 {
   "body": [
     {
+      "expression": {
+        "left": {
+          "index": {
+            "type": "integerNumericLiteral",
+            "value": 1
+          },
+          "type": "numberIndexVariable"
+        },
+        "operator": "=",
+        "right": {
+          "type": "integerNumericLiteral",
+          "value": 0
+        },
+        "type": "assignmentExpression"
+      },
+      "type": "expressionStatement"
+    },
+    {
+      "expression": {
+        "left": {
+          "index": {
+            "type": "integerNumericLiteral",
+            "value": 3
+          },
+          "type": "numberIndexVariable"
+        },
+        "operator": "=",
+        "right": {
+          "type": "integerNumericLiteral",
+          "value": 0
+        },
+        "type": "assignmentExpression"
+      },
+      "type": "expressionStatement"
+    },
+    {
       "body": [
         {
           "expression": {
@@ -13,68 +49,125 @@
             },
             "operator": "=",
             "right": {
-              "type": "integerNumericLiteral",
-              "value": 2
+              "left": {
+                "index": {
+                  "type": "integerNumericLiteral",
+                  "value": 1
+                },
+                "type": "numberIndexVariable"
+              },
+              "operator": "+",
+              "right": {
+                "type": "integerNumericLiteral",
+                "value": 1
+              },
+              "type": "binaryExpression"
             },
             "type": "assignmentExpression"
           },
           "type": "expressionStatement"
         },
         {
-          "alternate": {
-            "alternate": [
-            ],
-            "consequent": [
-            ],
-            "ifOCommand": {
+          "body": [
+            {
+              "expression": {
+                "left": {
+                  "index": {
+                    "type": "integerNumericLiteral",
+                    "value": 3
+                  },
+                  "type": "numberIndexVariable"
+                },
+                "operator": "=",
+                "right": {
+                  "left": {
+                    "index": {
+                      "type": "integerNumericLiteral",
+                      "value": 3
+                    },
+                    "type": "numberIndexVariable"
+                  },
+                  "operator": "+",
+                  "right": {
+                    "type": "integerNumericLiteral",
+                    "value": 1
+                  },
+                  "type": "binaryExpression"
+                },
+                "type": "assignmentExpression"
+              },
+              "type": "expressionStatement"
+            },
+            {
+              "breakOCommand": {
+              },
+              "nestedLayer": 2,
+              "type": "oBreakStatement"
+            }
+          ],
+          "endwhileOCommand": {
+            "index": {
+              "type": "integerNumericLiteral",
+              "value": 3
+            },
+            "type": "numberIndexOCommand"
+          },
+          "nestedLayer": 2,
+          "test": {
+            "left": {
               "index": {
                 "type": "integerNumericLiteral",
-                "value": 1
+                "value": 3
               },
-              "type": "numberIndexOCommand"
+              "type": "numberIndexVariable"
             },
-            "otherWordsList": [
-              {
-                "index": {
-                  "type": "integerNumericLiteral",
-                  "value": 1
-                },
-                "type": "numberIndexOCommand"
-              },
-              {
-                "index": {
-                  "type": "integerNumericLiteral",
-                  "value": 1
-                },
-                "type": "numberIndexOCommand"
-              }
-            ],
-            "test": {
+            "operator": "lt",
+            "right": {
               "type": "integerNumericLiteral",
-              "value": 2
+              "value": 4
             },
-            "type": "oIfStatement"
+            "type": "binaryExpression"
           },
+          "type": "oWhileStatement",
+          "whileOCommand": {
+            "index": {
+              "type": "integerNumericLiteral",
+              "value": 3
+            },
+            "type": "numberIndexOCommand"
+          }
+        },
+        {
+          "alternate": [
+            {
+              "breakOCommand": {
+                "index": {
+                  "type": "integerNumericLiteral",
+                  "value": 2
+                },
+                "type": "numberIndexOCommand"
+              },
+              "nestedLayer": 1,
+              "type": "oBreakStatement"
+            }
+          ],
           "consequent": [
             {
-              "returnOCommand": {
+              "continueOCommand": {
                 "index": {
                   "type": "integerNumericLiteral",
-                  "value": 100
+                  "value": 3
                 },
                 "type": "numberIndexOCommand"
               },
-              "returnRtnExpr": {
-                "type": "integerNumericLiteral",
-                "value": 1
-              },
-              "type": "oReturnStatement"
+              "nestedLayer": 1,
+              "type": "oContinueStatement"
             }
           ],
           "ifOCommand": {
             "index": {
               "type": "integerNumericLiteral",
-              "value": 1
+              "value": 2
             },
             "type": "numberIndexOCommand"
           },
@@ -82,80 +175,146 @@
             {
               "index": {
                 "type": "integerNumericLiteral",
-                "value": 1
+                "value": 2
+              },
+              "type": "numberIndexOCommand"
+            },
+            {
+              "index": {
+                "type": "integerNumericLiteral",
+                "value": 2
               },
               "type": "numberIndexOCommand"
             }
           ],
           "test": {
-            "type": "integerNumericLiteral",
-            "value": 1
+            "left": {
+              "index": {
+                "type": "integerNumericLiteral",
+                "value": 1
+              },
+              "type": "numberIndexVariable"
+            },
+            "operator": "lt",
+            "right": {
+              "type": "integerNumericLiteral",
+              "value": 5
+            },
+            "type": "binaryExpression"
           },
           "type": "oIfStatement"
         },
         {
-          "returnOCommand": {
+          "continueOCommand": {
+            "index": {
+              "type": "integerNumericLiteral",
+              "value": 2
+            },
+            "type": "numberIndexOCommand"
+          },
+          "nestedLayer": 1,
+          "type": "oContinueStatement"
+        },
+        {
+          "commands": [
+            {
+              "letter": "g",
+              "number": {
+                "type": "integerNumericLiteral",
+                "value": 91
+              },
+              "type": "commandNumberGroup"
+            }
+          ],
+          "type": "commandStatement"
+        },
+        {
+          "body": [
+            {
+              "commands": [
+                {
+                  "letter": "g",
+                  "number": {
+                    "type": "integerNumericLiteral",
+                    "value": 1
+                  },
+                  "type": "commandNumberGroup"
+                },
+                {
+                  "letter": "x",
+                  "number": {
+                    "type": "integerNumericLiteral",
+                    "value": 1
+                  },
+                  "type": "commandNumberGroup"
+                }
+              ],
+              "type": "commandStatement"
+            }
+          ],
+          "endrepeatOCommand": {
             "index": {
               "type": "integerNumericLiteral",
               "value": 100
             },
             "type": "numberIndexOCommand"
           },
-          "returnRtnExpr": {
-            "left": {
+          "repeatOCommand": {
+            "index": {
               "type": "integerNumericLiteral",
-              "value": 1
+              "value": 100
             },
-            "operator": "*",
+            "type": "numberIndexOCommand"
+          },
+          "times": {
+            "left": {
+              "index": {
+                "type": "integerNumericLiteral",
+                "value": 2
+              },
+              "type": "numberIndexVariable"
+            },
+            "operator": "+",
             "right": {
               "type": "integerNumericLiteral",
-              "value": 2
+              "value": 5
             },
             "type": "binaryExpression"
           },
-          "type": "oReturnStatement"
+          "type": "oRepeatStatement"
         }
       ],
-      "endsubRtnExpr": {
-        "left": {
-          "type": "integerNumericLiteral",
-          "value": 2
-        },
-        "operator": "+",
-        "right": {
+      "endwhileOCommand": {
+        "index": {
           "type": "integerNumericLiteral",
           "value": 1
         },
+        "type": "numberIndexOCommand"
+      },
+      "nestedLayer": 1,
+      "test": {
+        "left": {
+          "index": {
+            "type": "integerNumericLiteral",
+            "value": 1
+          },
+          "type": "numberIndexVariable"
+        },
+        "operator": "lt",
+        "right": {
+          "type": "integerNumericLiteral",
+          "value": 10
+        },
         "type": "binaryExpression"
       },
-      "subOCommand": {
+      "type": "oWhileStatement",
+      "whileOCommand": {
         "index": {
           "type": "integerNumericLiteral",
-          "value": 100
+          "value": 1
         },
         "type": "numberIndexOCommand"
-      },
-      "type": "oSubStatement"
-    },
-    {
-      "callOCommand": {
-        "index": {
-          "type": "integerNumericLiteral",
-          "value": 100
-        },
-        "type": "numberIndexOCommand"
-      },
-      "paramList": [
-        {
-          "type": "integerNumericLiteral",
-          "value": 0
-        },
-        {
-          "type": "integerNumericLiteral",
-          "value": 2
-        }
-      ],
-      "type": "oCallStatement"
+      }
     }
   ],
   "type": "program"

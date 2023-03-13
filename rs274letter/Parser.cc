@@ -192,6 +192,14 @@ AstObject Parser::oCommandStatement(const std::optional<AstObject> pre_o_word/* 
         return this->oSubStatement(o_command_start);
     } else if (next_type_after_o == "return") {
         return this->oReturnStatement(o_command_start);
+    } else if (next_type_after_o == "while") {
+        return this->oWhileStatement(o_command_start);
+    } else if (next_type_after_o == "continue") {
+        return this->oContinueStatement(o_command_start);
+    } else if (next_type_after_o == "break") {
+        return this->oBreakStatement(o_command_start);
+    } else if (next_type_after_o == "repeat") {
+        return this->oRepeatStatement(o_command_start);
     } else {
         std::cout << util::BacktraceToString(100) << std::endl;
         throw SyntaxError("Unexpected token type after oCommand: " + next_type_after_o);
@@ -403,8 +411,104 @@ AstObject Parser::oSubStatement(const AstObject &o_command_start)
     return AstObject{
         {"type", "oSubStatement"},
         {"subOCommand", std::move(sub_o_command)},
+        {"endsubOCommand", this->_last_o_word},
         {"body", body},
         {"endsubRtnExpr", std::move(return_expression)}
+    };
+}
+
+AstObject Parser::oWhileStatement(const AstObject &o_command_start)
+{
+    ++this->_parsing_o_while_layers;
+    auto while_o_command = o_command_start;
+
+    this->eat("while");
+
+    // condition(test)
+    auto&& test = this->parenthesizedExpression();
+    this->eat("RTN");
+
+    // body
+    auto&& body = this->statementList({{"endwhile"}});
+
+    // endwhile
+    auto endwhile_o_command = this->_last_o_word;
+    this->eat("endwhile");
+    if (!this->_lookahead.empty()) this->eat("RTN");
+
+    --this->_parsing_o_while_layers;
+    return AstObject{
+        {"type", "oWhileStatement"},
+        {"whileOCommand", std::move(while_o_command)},
+        {"endwhileOCommand", std::move(endwhile_o_command)},
+        {"test", test},
+        {"body", body},
+        {"nestedLayer", this->_parsing_o_while_layers + 1} // layers, used for debug
+    };
+}
+
+AstObject Parser::oContinueStatement(const AstObject &o_command_start)
+{
+    if (this->_parsing_o_while_layers < 1) {
+        std::stringstream ss;
+        ss << "o-continue statement should be in a while-statement\n"
+           << this->_tokenizer->getLineColumnShowString();
+        throw SyntaxError(ss.str());
+    }
+
+    auto continue_o_command = this->_last_o_word;
+    this->eat("continue");
+    
+    return AstObject{
+        {"type", "oContinueStatement"},
+        {"continueOCommand", std::move(continue_o_command)},
+        {"nestedLayer", this->_parsing_o_while_layers}
+    };
+}
+
+AstObject Parser::oBreakStatement(const AstObject & o_command_start)
+{
+    if (this->_parsing_o_while_layers < 1) {
+        std::stringstream ss;
+        ss << "o-break statement should be in a while-statement\n"
+           << this->_tokenizer->getLineColumnShowString();
+        throw SyntaxError(ss.str());
+    }
+
+    auto break_o_command = this->_last_o_word;
+    this->eat("break");
+    
+    return AstObject{
+        {"type", "oBreakStatement"},
+        {"breakOCommand", std::move(break_o_command)},
+        {"nestedLayer", this->_parsing_o_while_layers}
+    };
+}
+
+AstObject Parser::oRepeatStatement(const AstObject &o_command_start)
+{
+    auto repeat_o_command = o_command_start;
+
+    this->eat("repeat");
+
+    // repeat times
+    auto&& times = this->parenthesizedExpression();
+    this->eat("RTN");
+
+    // body
+    auto&& body = this->statementList({{"endrepeat"}});
+
+    // endrepeat
+    auto endrepeat_o_command = this->_last_o_word;
+    this->eat("endrepeat");
+    if (!this->_lookahead.empty()) this->eat("RTN");
+
+    return AstObject{
+        {"type", "oRepeatStatement"},
+        {"repeatOCommand", std::move(repeat_o_command)},
+        {"endrepeatOCommand", std::move(endrepeat_o_command)},
+        {"times", times},
+        {"body", body}
     };
 }
 

@@ -101,6 +101,8 @@ private:
      *  : oCallStatement
      *  | oIfStatement 
      *  | oSubStatement
+     *  | oWhileStatement
+     *  | oRepeatStatement
      *  ;
      * if given pre_o_word, it will not eat an oCommand inside the function
     */
@@ -117,6 +119,7 @@ private:
      * an oReturnStatement is:
      *  : (pre-oCommand) return opt-parenthesizedExpression "RTN"
      *  ;
+     * Should only appear in a subStatement block
     */
     AstObject oReturnStatement(const AstObject& o_command_start);
 
@@ -143,6 +146,35 @@ private:
      * Do not allow nested oSubStatement
     */
     AstObject oSubStatement(const AstObject& o_command_start);
+
+    /**
+     * an oWhileStatement is:
+     *  : (pre-oCommand) while parenthesizedExpression "RTN" opt-statementList endwhile "RTN"
+    */
+    AstObject oWhileStatement(const AstObject& o_command_start);
+
+    /**
+     * an oContinueStatement is:
+     *  : (pre-oCommand) continue "RTN"
+     *  ;
+     * Should only appears in a while loop
+    */
+    AstObject oContinueStatement(const AstObject& o_command_start);
+
+    /**
+     * an oBreakStatement is:
+     *  : (pre-oCommand) break "RTN"
+     *  ;
+     * Should only appears in a while loop
+    */
+    AstObject oBreakStatement(const AstObject& o_command_start);
+
+    /**
+     * an oRepeatStatement is:
+     *  : (pre-oCommand) repeat parenthesizedExpression "RTN"
+     *  ;
+     */
+    AstObject oRepeatStatement(const AstObject& o_command_start);
 
     /**
      * A commandNumberGroupList is an array of commandNumberGroup:
@@ -174,9 +206,10 @@ private:
     /**
      * Expression Priority: (low to high)
      *  assignmentExpression
+     *  relationalExpression
      *  additiveExpression
      *  multiplicativeExpression
-     *  primaryExpression (which could be literal / parenthesizedExpression / leftHandSideExpression )
+     *  primaryExpression
      *  ;
     */
 
@@ -191,11 +224,11 @@ private:
 
     /**
      * An assignmentExpression may be:
-     *  : additiveExpression,
-     *  | leftHandSideExpression assignmentOperator additiveExpression
+     *  : relationalExpression,
+     *  | leftHandSideExpression assignmentOperator relationalExpression
      *  ;
      * Note: the expanded assignmentExpression must have a leftHandSideExpresion on its left,
-     * However, we can only first parse an `additiveExpression`, then examine if it is an `leftHandSideExpresion`
+     * However, we can only first parse an `relationalExpression`, then examine if it is an `leftHandSideExpresion`
      * @param bool must_be_assignment
     */
     AstObject assignmentExpression(bool must_be_assignment = false);
@@ -208,10 +241,16 @@ private:
     */
     TokenValue assignmentOperator();
 
+    /**
+     * a relationalExpression is:
+     *  : additiveExpression
+     *  | relationalExpression RELATIONAL_OPERATOR relationalExpression
+     *  ;
+    */
     AstObject relationalExpression();
     
     /**
-     * An additiveExpression maybe:
+     * an additiveExpression maybe:
      *  : multiplicativeExpression
      *  | additiveExpression ADDITIVE_OPERATOR additiveExpression
      *  ;
@@ -219,7 +258,7 @@ private:
     AstObject additiveExpression();
 
     /**
-     * An multiplicativeExpression maybe:
+     * a multiplicativeExpression maybe:
      *  : primaryExpression
      *  | multiplicativeExpression ADDITIVE_OPERATOR primaryExpression
      *  ;
@@ -321,6 +360,9 @@ private:
 
     // used to examine if `o... return` is used in an `o... sub`
     bool _parsing_o_sub = false;
+
+    // used to examine if `o... continue/break` is used in an `o... while`
+    int _parsing_o_while_layers = 0; // layer stands for the loop nested layers, 0 is no loop
 };
 
 } // namespace rs274letter

@@ -51,6 +51,17 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     XX(R"(^\bsub\b|^\bSUB\b)", "sub"),
     XX(R"(^\breturn\b|^\bRETURN\b)", "return"),
     XX(R"(^\bendsub\b|^\bENDSUB\b)", "endsub"),
+
+    // while related keywords
+    XX(R"(^\bwhile\b|^\bWHILE\b)", "while"),
+    XX(R"(^\bendwhile\b|^\bENDWHILE\b)", "endwhile"),
+    // XX(R"(^\bdo\b|^\bDO\b)", "do"),      // Won't support do-while structure
+    XX(R"(^\bbreak\b|^\bBREAK\b)", "break"),
+    XX(R"(^\bcontinue\b|^\bCONTINUE\b)", "continue"),
+
+    // repeat related keywords
+    XX(R"(^\brepeat\b|^\bREPEAT\b)", "repeat"),
+    XX(R"(^\bendrepeat\b|^\bENDREPEAT\b)", "endrepeat"),
     
 
     XX(R"(^[oO](?![a-zA-Z_]))", "O"), // control command letter "o" / "O", above all letters
