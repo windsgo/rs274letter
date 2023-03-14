@@ -3,6 +3,7 @@ add_library(rs274letter SHARED
     Parser.cc
     util.cc
     Serializer.cc
+    InsideFunction.cc
 )
 
 find_package(Boost)

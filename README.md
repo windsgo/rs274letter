@@ -76,10 +76,24 @@ The number-indexed `#...` rules is the same as o-words `o...`.
     deal with the forward ADDITIVE_OPERATOR `+/-`.
 
 
-### compare operator
+### relational operator
 
 Having the traditional `gt` `lt` `eq` `ne` `ge` `le`,
 I decided to ***temporarily*** support `>` `<` `>=` `<=` `==` `!=` in `[...]` expressions, because it might conflict the usage of `#<var>`.
+
+### logical operator
+
+Support `and` `or` `xor`
+
+### low, up case
+
+We only allow whole up-case keyword or whole low-case keyword, for example, `if` and `IF` are valid,
+while `iF` and `If` are not valid.
+
+### inside functions
+
+The same up-low-case rule as described above. Besides, the `EXISTS[]` function will return 0,
+if a number-indexed variable is not defined, which is different from linuxcnc rs274.
 
 
 ### if, while, do-while, sub

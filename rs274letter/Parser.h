@@ -206,9 +206,11 @@ private:
     /**
      * Expression Priority: (low to high)
      *  assignmentExpression
+     *  logicalExpression
      *  relationalExpression
      *  additiveExpression
      *  multiplicativeExpression
+     *  powExpression
      *  primaryExpression
      *  ;
     */
@@ -224,8 +226,8 @@ private:
 
     /**
      * An assignmentExpression may be:
-     *  : relationalExpression,
-     *  | leftHandSideExpression assignmentOperator relationalExpression
+     *  : logicalExpression,
+     *  | leftHandSideExpression assignmentOperator logicalExpression
      *  ;
      * Note: the expanded assignmentExpression must have a leftHandSideExpresion on its left,
      * However, we can only first parse an `relationalExpression`, then examine if it is an `leftHandSideExpresion`
@@ -242,9 +244,17 @@ private:
     TokenValue assignmentOperator();
 
     /**
+     * a logicalExpression is:
+     *  : relationalExpression
+     *  | logicalExpression RELATIONAL_OPERATOR relationalExpression
+     *  ;
+    */
+    AstObject logicalExpression();
+
+    /**
      * a relationalExpression is:
      *  : additiveExpression
-     *  | relationalExpression RELATIONAL_OPERATOR relationalExpression
+     *  | relationalExpression RELATIONAL_OPERATOR additiveExpression
      *  ;
     */
     AstObject relationalExpression();
@@ -259,22 +269,40 @@ private:
 
     /**
      * a multiplicativeExpression maybe:
-     *  : primaryExpression
-     *  | multiplicativeExpression ADDITIVE_OPERATOR primaryExpression
+     *  : powExpression
+     *  | multiplicativeExpression MULTIPLICATIVE_OPERATOR powExpression
      *  ;
     */
     AstObject multiplicativeExpression();
+
+    /**
+     * a powExpression is:
+     *  : primaryExpression
+     *  | powExpression POW_OPERATOR primaryExpression
+     *  ; 
+    */
+    AstObject powExpression();
 
     /**
      * An primaryExpression maybe:
      *  : optADDITIVE_OPERATOR numericLiteral
      *  | optADDITIVE_OPERATOR parenthesizedExpression
      *  | optADDITIVE_OPERATOR leftHandSideExpression
+     *  | optADDITIVE_OPERATOR insideFunctionExpression
      *  ;
      * @param bool can_have_forward_additive_op
      * use the param because we don't want like `--#1` appears
+     *  - perf: not allow -- appear in regex specify
     */
-    AstObject primaryExpression(bool can_have_forward_additive_op = true);
+    AstObject primaryExpression(/*bool can_have_forward_additive_op = true*/);
+
+    /**
+     * an insideFunctionExpression may be:
+     *  : IDENTIFIER(=ATAN) parenthesizedExpression "/" parenthesizedExpression
+     *  | IDENTIFIER(others) parenthesizedExpression
+     *  ;
+    */
+    AstObject insideFunctionExpression();
 
     /**
      * A parenthesizedExpression is:

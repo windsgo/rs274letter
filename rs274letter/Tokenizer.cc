@@ -90,7 +90,7 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
 
     // Variable Operations
     XX(R"(^#)", "#"),               // #, variable pre Identifier
-    XX(R"(^=)", "ASSIGN_OPERATOR"),          // =, assignment operator =
+    XX(R"(^=(?!=))", "ASSIGN_OPERATOR"),          // =, assignment operator =
     XX(R"(^<\w+>)", "VAR_NAME"),    // variable name <_var_name_>
 
     // Numerical Literals
@@ -98,11 +98,13 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     XX(R"(^\d+)", "INTEGER"),
 
     // Relational Operations
-    XX(R"(^[><]=?|^[gl][te]|^[GL][TE])", "RELATIONAL_OPERATOR"),
+    XX(R"(^[><]=?|^==|^!=|^[gl][te]|^[GL][TE]|^EQ|^eq|^NE|^ne)", "RELATIONAL_OPERATOR"),
 
     // Binary Expression
-    XX(R"(^[\+\-])", "ADDITIVE_OPERATOR"), // "+" or "-"
-    XX(R"(^[\*\/])", "MULTIPLICATIVE_OPERATOR"), // "*" or "/"
+    XX(R"(^\*\*(?![\*\/]))", "POW_OPERATOR"), // "**",
+    XX(R"(^\+(?!\+)|^\-(?!\-))", "ADDITIVE_OPERATOR"), // "+" or "-", donot allow "--" or "++", but allow "+-", "-+"
+    XX(R"(^[\*\/](?![\*]))", "MULTIPLICATIVE_OPERATOR"), // "*" or "/"
+    XX(R"(^and|^AND|^or|^OR|^xor|^XOR)", "LOGICAL_OPERATOR"), // logic: AND OR XOR
 
     XX(R"(^\[)", "["),
     XX(R"(^\])", "]"),
@@ -111,7 +113,7 @@ static const std::vector<std::tuple<std::string, std::regex, TokenType>> s_spec_
     // String Literals: only used for call syntax: call "myfile.ngc" (not rs274 standard) // TODO
     XX(R"(^"\w*")", "STRING"),
 
-    XX(R"(^\w+)", "STR")
+    XX(R"(^\w+)", "IDENTIFIER") // used for internal function
 };
 
 #undef XX
@@ -175,7 +177,7 @@ Token Tokenizer::getNextToken() {
 
         auto&& token_value = token_value_opt.value();
         
-        if (token_type != "NULL" || true)
+        if (token_type != "NULL")
             std::cout << "\t[DEBUG]: " 
                 // << "Match regex: " << "\033[33m" << raw_pattern_str  << "\033[0m"
                 << "\ttype: " << "\033[32m" << token_type << "\033[0m"
@@ -201,7 +203,8 @@ Token Tokenizer::getNextToken() {
     }
 
     std::stringstream ss;
-    ss << "Unexpected token(char): \"" << (*this->_cur) << "\"";
+    ss << "Unexpected token(char): \"" << (*this->_cur) << "\"\n"
+       << this->getLineColumnShowString();
     throw Exception(ss.str());
 }
 

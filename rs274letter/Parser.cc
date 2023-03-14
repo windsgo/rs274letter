@@ -4,6 +4,7 @@
 #include "Exception.h"
 #include "util.h"
 #include "macro.h"
+#include "InsideFunction.h"
 
 #include <iostream>
 #include <sstream>
@@ -569,7 +570,8 @@ AstObject Parser::expression(bool must_be_assignment/* = false*/)
 AstObject Parser::assignmentExpression(bool must_be_assignment/* = false*/)
 {
     // auto&& left = this->additiveExpression();
-    auto&& left = this->relationalExpression();
+    // auto&& left = this->relationalExpression();
+    auto&& left = this->logicalExpression();
 
     if (!this->IsAssignmentOperator(this->_lookahead)) {
         // if must_be_assignment, throw SyntaxError here
@@ -606,6 +608,35 @@ TokenValue Parser::assignmentOperator()
     return this->eat("ASSIGN_OPERATOR");
 }
 
+AstObject Parser::logicalExpression()
+{
+    auto&& left = this->relationalExpression();
+
+    while (Tokenizer::GetTokenType(this->_lookahead) == "LOGICAL_OPERATOR") {
+        auto&& op = this->eat("LOGICAL_OPERATOR"); // eat the operator
+        auto&& right = this->relationalExpression(); // get the right hand side expression
+
+        std::transform(op.begin(), op.end(), op.begin(), [](int x) -> int {
+            if (std::isalpha(x)) {
+                return std::tolower(x);
+            }
+            else 
+                return x;
+        });
+
+        // make the original left, be the "left-hand-side" of new left, 
+        // since the original left found a right-hand-side expression
+        left = AstObject{
+            {"type", "binaryExpression"},
+            {"operator", op},
+            {"left", left},
+            {"right", right}
+        };
+    }
+
+    return left;
+}
+
 AstObject Parser::relationalExpression()
 {
     auto&& left = this->additiveExpression();
@@ -613,6 +644,14 @@ AstObject Parser::relationalExpression()
     while (Tokenizer::GetTokenType(this->_lookahead) == "RELATIONAL_OPERATOR") {
         auto&& op = this->eat("RELATIONAL_OPERATOR"); // eat the operator
         auto&& right = this->additiveExpression(); // get the right hand side expression
+
+        std::transform(op.begin(), op.end(), op.begin(), [](int x) -> int {
+            if (std::isalpha(x)) {
+                return std::tolower(x);
+            }
+            else 
+                return x;
+        });
 
         // make the original left, be the "left-hand-side" of new left, 
         // since the original left found a right-hand-side expression
@@ -657,12 +696,36 @@ AstObject Parser::additiveExpression()
 AstObject Parser::multiplicativeExpression()
 {
     // an `multiplicativeExpression` may just be a `primaryExpression`
-    auto&& left = this->primaryExpression();
+    auto&& left = this->powExpression();
 
     // or have an MULTIPLICATIVE_OPERATOR with right-hand-side-primaryExpression
     // while loop to expand nested multiplicativeExpression
     while (Tokenizer::GetTokenType(this->_lookahead) == "MULTIPLICATIVE_OPERATOR") {
         auto&& op = this->eat("MULTIPLICATIVE_OPERATOR"); // eat the operator
+        auto&& right = this->powExpression(); // get the right hand side expression
+
+        // make the original left, be the "left-hand-side" of new left, 
+        // since the original left found a right-hand-side expression
+        left = AstObject{
+            {"type", "binaryExpression"},
+            {"operator", op},
+            {"left", left},
+            {"right", right}
+        };
+    }
+
+    return left;
+}
+
+AstObject Parser::powExpression()
+{
+    // an `powExpression` may just be a `primaryExpression`
+    auto&& left = this->primaryExpression();
+
+    // or have an POW_OPERATOR with right-hand-side-primaryExpression
+    // while loop to expand nested powExpression
+    while (Tokenizer::GetTokenType(this->_lookahead) == "POW_OPERATOR") {
+        auto&& op = this->eat("POW_OPERATOR"); // eat the operator "**"
         auto&& right = this->primaryExpression(); // get the right hand side expression
 
         // make the original left, be the "left-hand-side" of new left, 
@@ -678,11 +741,11 @@ AstObject Parser::multiplicativeExpression()
     return left;
 }
 
-AstObject Parser::primaryExpression(bool can_have_forward_additive_op/* = true*/)
+AstObject Parser::primaryExpression(/*bool can_have_forward_additive_op = true*/)
 {
     auto&& type = Tokenizer::GetTokenType(this->_lookahead);
     
-    if (type == "ADDITIVE_OPERATOR" && can_have_forward_additive_op) {
+    if (type == "ADDITIVE_OPERATOR"/* && can_have_forward_additive_op*/) {
         // 一元运算符，正、负，识别为additive，包装为一个省略0的加减法表达式
         auto zero = AstObject{
             {"type", "integerNumericLiteral"},
@@ -694,15 +757,75 @@ AstObject Parser::primaryExpression(bool can_have_forward_additive_op/* = true*/
             {"type", "binaryExpression"},
             {"operator", op},
             {"left", std::move(zero)},
-            {"right", this->primaryExpression(false)}
+            {"right", this->primaryExpression()}
         };
     } else if ( type == "INTEGER" || type == "DOUBLE" ) {
         return this->numericLiteral();
     } else if (type == "[") {
         return this->parenthesizedExpression();
+    } else if (type == "IDENTIFIER") { // see as inside function detect
+        return this->insideFunctionExpression();
     } else {
         return this->leftHandSideExpression();
     }
+}
+
+AstObject Parser::insideFunctionExpression()
+{
+    auto&& function_name = this->eat("IDENTIFIER");
+    std::transform(function_name.begin(), function_name.end(), function_name.begin(), [](int x) -> int {
+        if (std::isalpha(x)) {
+            return std::tolower(x);
+        }
+        else 
+            return x;
+    });
+
+    std::stringstream ss;
+
+    // examine whether the function name is valid
+    if (!IsInsideFunction(function_name)) {
+        ss << "Unexpected identifier name: " << function_name << "\n"
+           << this->_tokenizer->getLineColumnShowString();
+        throw SyntaxError(ss.str());
+    }
+
+    AstValue param;
+    if (function_name == "atan") {
+        param.array_emplace(this->parenthesizedExpression());
+        
+        // syntax: atan[...]/[...]
+        // atan should have a slash after the first param 
+        if (this->_lookahead.empty()
+            || (Tokenizer::GetTokenType(this->_lookahead) != "MULTIPLICATIVE_OPERATOR")
+            || (this->eat("MULTIPLICATIVE_OPERATOR") != "/")) {
+            ss << "ATAN function should use with a slash like: atan[1]/[2]\n"
+               << this->_tokenizer->getLineColumnShowString();
+            throw SyntaxError(ss.str());
+        }
+
+        param.array_emplace(this->parenthesizedExpression());
+
+    } else {
+        param = this->parenthesizedExpression();
+    }
+
+    // special function: exists[#<var_name>] / exists[#1]
+    if (function_name == "exists") {
+        // check the param
+        if (param.at("type").as_string() != "nameIndexVariable"
+            && param.at("type").as_string() != "numberIndexVariable") {
+            ss << "Unexpected token inside function EXISTS, should be an variable\n"
+               << this->_tokenizer->getLineColumnShowString();
+            throw SyntaxError(ss.str());
+        }
+    }
+
+    return AstObject{
+        {"type", "insideFunctionExpression"},
+        {"functionName", function_name},
+        {"param", param}
+    };
 }
 
 AstObject Parser::parenthesizedExpression()
