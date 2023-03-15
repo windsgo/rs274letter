@@ -115,10 +115,15 @@ public:
     inline void clear() {
         this->_parse_result.clear();
         this->_command_statement_list.clear();
+
         this->_nameindex_oword_set.clear();
         this->_numberindex_oword_set.clear();
+
         this->_nameindex_variable_value_map.clear();
         this->_numberindex_variable_value_map.clear();
+        this->_sub_nameindex_variable_value_map.clear();
+        this->_sub_numberindex_variable_value_map.clear();
+        this->_global_nameindex_variable_value_map.clear();
     }
 
 public:
@@ -131,13 +136,15 @@ public:
      * @details 
      *  - int: get `#1` like variable
      *  - std::string: get `#<var_name>`
+     * @note
+     *  This only returns the non-sub local variables and global variables
     */
     template <typename T>
     double getVariableValue(const T& key) const {
         if constexpr (std::is_constructible_v<std::string, T>) {
-            return this->_nameindex_variable_value_map.at(key);
+            return this->existsAndGetVariable(key).value();
         } else if constexpr (std::is_constructible_v<int, T>) {
-            return this->_numberindex_variable_value_map.at(key);
+            return this->existsAndGetVariable(key).value();
         } else {
             static_assert(std::is_constructible_v<std::string, T> 
                 || std::is_constructible_v<int, T>, 
@@ -154,13 +161,11 @@ public:
     }
 
     template <typename T>
-    bool hasVariable(const T& key) const {
+    std::optional<double> hasVariable(const T& key) const {
         if constexpr (std::is_constructible_v<std::string, T>) {
-            return this->_nameindex_variable_value_map.find(key) 
-                != this->_nameindex_variable_value_map.end();
+            return this->existsAndGetVariable(key);
         } else if constexpr (std::is_constructible_v<int, T>) {
-            return this->_numberindex_variable_value_map.find(key)
-                != this->_numberindex_variable_value_map.end();
+            return this->existsAndGetVariable(key);
         } else {
             static_assert(std::is_constructible_v<std::string, T> 
                 || std::is_constructible_v<int, T>, 
@@ -168,11 +173,63 @@ public:
         }
     }
 
+    std::string getAllVariablesPrinted() const {
+        std::stringstream ss;
+
+        ss << "normal number indexed:\n";
+        for (const auto& i : this->_numberindex_variable_value_map) {
+            ss << i.first << ": " << i.second << "\n";
+        }
+
+        ss << "normal name indexed:\n";
+        for (const auto& i : this->_nameindex_variable_value_map) {
+            ss << i.first << ": " << i.second << "\n";
+        }
+
+        ss << "global:\n";
+        for (const auto& i : this->_global_nameindex_variable_value_map) {
+            ss << i.first << ": " << i.second.second << ", "
+            << (i.second.first == GlobalVariableType::Internal ? "Internal" : "Normal") 
+            << "\n";
+        }
+
+        return ss.str();
+    }
+
 private:
+    /**************************/
+    /***  variable related  ***/
+    /**************************/
+
+    /**
+     * These functions are used when the statements are trying to
+     * store and search variables. These functions will automatically
+     * figure out whether it is a `sub environment` and whether the
+     * given `key`/`index` exists or is a global index
+     * @throw If anything wrong, will throw exception, since it is a statement error 
+    */
+
+    void storeVariable(const std::string& index, double value, bool assign_internal = false);
+    void storeVariable(int index, double value);
+
+    // if exists the index, return the value, differs whether in the sub or not
+    std::optional<double>
+    existsAndGetVariable(int index) const;
+    std::optional<double>
+    existsAndGetVariable(const std::string& index) const;
+
+    /**
+     * @brief returns true if the index is a global index (starts with '_')
+     * `AND` the index exists in the _global_var_map
+     * `AND` the found exist variable is marked as `Internal`.
+     * Otherwise returns false;
+    */
+    bool isInternalNameIndex(const std::string& index) const;
+
     
-    /***********************/
-    /*** private methods ***/
-    /***********************/
+    /**************************/
+    /*** process statements ***/
+    /**************************/
 
     /**
      * @brief process a statement list
@@ -210,6 +267,13 @@ private:
     */
     void processOIfStatement(const AstObject& o_if_statement);
 
+    /**************************/
+    /*** astnode value get  ***/
+    /**************************/
+
+    /**
+     * These functions are used when calculating the value of expressions
+    */
 
     /**
      * @brief get the calculated value of any type of expression
@@ -247,19 +311,42 @@ private:
     double getValueOfAssignmentExpression(const AstObject& expression);
     void assignVariable(const AstObject& target, double value);
 
-private:
+private: // private status function, just easier for further revise
+    inline bool _isInSubEnvironment() const { return _is_in_sub; }
+
+private: // static 
     // helper functions
     static bool _is_within_tolerance(const double& d);
     static std::optional<int> _convert_to_integer(const double& d, bool not_negative = true);
 
+    // these functions simply help to tell whether a variable `LOOKS LIKE` a global variable
+    static bool _start_with_underline(const std::string& str);
+    static bool _is_global_variable(const AstObject& variable);
+    static bool _is_global_variable_name_index(const std::string& variable_index);
+
 private:
+    // normal variables
     std::unordered_map<int, double> _numberindex_variable_value_map;
     std::unordered_map<std::string, double> _nameindex_variable_value_map;
 
+    // sub environment variables
+    std::unordered_map<int, double> _sub_numberindex_variable_value_map;
+    std::unordered_map<std::string, double> _sub_nameindex_variable_value_map;
+
+    // global environment name-indexed variable
+    enum GlobalVariableType { Internal = 0, Normal = 1 };
+    std::unordered_map<std::string, std::pair<GlobalVariableType, double>> _global_nameindex_variable_value_map;
+
+    // o-word set
     std::unordered_set<int> _numberindex_oword_set;
     std::unordered_set<std::string> _nameindex_oword_set;
 
     AstObject _parse_result;
+
+private:
+    // environment and status
+    bool _is_in_sub = false; // if is in a sub environment
+
 
 private:
     std::list<CommandStatement> _command_statement_list;

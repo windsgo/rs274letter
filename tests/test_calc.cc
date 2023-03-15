@@ -20,6 +20,8 @@ int main(int argc, char** argv) {
     std::string code = R"(
         #5 = [#6 = 123]
         #<_abc_> = [#5 GT 12.34]
+        #<abc_> = [#<_abc_> * 10 / 5]
+        #<__abc_> = [#<_abc_> * 100 / 5]
         G55G90G01X#5Y[-#6]A-#<_abc_>B.65C121.95F100
         o1 if [#5 EQ123.0]
             #6 = [9**0.5]
@@ -66,8 +68,8 @@ int main(int argc, char** argv) {
         std::cout << "#5:" << s.getVariableValue(5) << std::endl;
         std::cout << "#6:" << s.getVariableValue(6) << std::endl;
         for (unsigned int i = 0; i < 100; ++i) {
-            if (s.hasVariable(i))
-                std::cout << "#" << i << " = " << s.getVariableValue(i) << std::endl;
+            if (auto v = s.hasVariable(i))
+                std::cout << "#" << i << " = " << v.value() << std::endl;
         }
 
         std::cout << "#<_abc_>:" << s.getVariableValue("_abc_") << std::endl;
@@ -75,6 +77,8 @@ int main(int argc, char** argv) {
         for (const auto& i : s.getCommandList()) {
             std::cout << i << std::endl;
         }
+
+        std::cout << s.getAllVariablesPrinted() << std::endl;
         
     } 
     catch (rs274letter::Exception& e) {

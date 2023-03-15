@@ -4,6 +4,8 @@
 #include <iomanip>
 #include <iostream>
 
+#define VARIABLE_DEBUG_OUPUT
+
 namespace rs274letter
 {
 
@@ -23,8 +25,149 @@ static double _deg2rad(double reg) {
 #define RS274LETTER_ASSERT_TYPE2(v, type1, type2) \
     RS274LETTER_ASSERT(v.at("type").as_string() == type1 || v.at("type").as_string() == type2)
 
+void Serializer::storeVariable(const std::string &index, double value, bool assign_internal/* = false*/)
+{
+#ifdef VARIABLE_DEBUG_OUPUT
+    const char* env = this->_isInSubEnvironment() ? "[Sub]" : "[Normal]";
+    if (auto old = this->existsAndGetVariable(index)) {
+        std::cout << env
+            <<"Override nameIndexVariable, index: " << index
+            << ", old_value: " << old.value()
+            << ", new_value: " << value << std::endl;
+    } else {
+        std::cout << env
+            << "Define new nameIndexVariable, index: " << index
+            << ", value: " << value << std::endl;
+    }
+#endif
 
-void Serializer::processStatementList(const AstArray& statement_list)
+    std::stringstream ss;
+    // examine whether the index stands for a global index
+    if (_is_global_variable_name_index(index)) {
+        // global index
+        if (this->isInternalNameIndex(index) && !assign_internal) {
+            ss << "Cannot assign to a internal variable"
+               << ", index: " << index;
+            throw SerializerError(ss.str());
+        } else if (assign_internal) {
+            // internal assign
+            this->_global_nameindex_variable_value_map[index] = {
+                GlobalVariableType::Internal, value
+            };
+        } else {
+            // normal global assign
+            this->_global_nameindex_variable_value_map[index] = {
+                GlobalVariableType::Normal, value
+            };
+        }
+
+        // end store
+        return;
+    }
+
+    if (this->_isInSubEnvironment()) {
+        // In a sub-environment
+        this->_sub_nameindex_variable_value_map[index] = value;
+    } else {   
+        // Not in a sub-environment
+        this->_nameindex_variable_value_map[index] = value;
+    }
+}
+
+void Serializer::storeVariable(int index, double value)
+{
+#ifdef VARIABLE_DEBUG_OUPUT
+    const char* env = this->_isInSubEnvironment() ? "[Sub]" : "[Normal]";
+    if (auto old = this->existsAndGetVariable(index)) {
+        std::cout << env
+            <<"Override numberIndexVariable, index: " << index
+            << ", old_value: " << old.value()
+            << ", new_value: " << value << std::endl;
+    } else {
+        std::cout << env
+            << "Define new numberIndexVariable, index: " << index
+            << ", value: " << value << std::endl;
+    }
+#endif
+    if (this->_isInSubEnvironment()) {
+        // In a sub-environment
+        this->_sub_numberindex_variable_value_map[index] = value;
+    } else {   
+        // Not in a sub-environment
+        this->_numberindex_variable_value_map[index] = value;
+    }
+}
+
+std::optional<double> Serializer::existsAndGetVariable(int index) const
+{
+    if (this->_isInSubEnvironment()) {
+        auto it = this->_sub_numberindex_variable_value_map.find(index);
+        if (it == this->_sub_numberindex_variable_value_map.end()) {
+            return std::nullopt;
+        } else {
+            return it->second;
+        }
+    } else {
+        auto it = this->_numberindex_variable_value_map.find(index);
+        if (it == this->_numberindex_variable_value_map.end()) {
+            return std::nullopt;
+        } else {
+            return it->second;
+        }
+    }
+}
+
+std::optional<double> Serializer::existsAndGetVariable(const std::string &index) const
+{
+    if (_is_global_variable_name_index(index)) {
+        auto it = this->_global_nameindex_variable_value_map.find(index);
+        if (it == this->_global_nameindex_variable_value_map.end()) {
+            return std::nullopt;
+        } else {
+            return it->second.second;
+        }
+    }
+
+    if (this->_isInSubEnvironment()) {
+        auto it = this->_sub_nameindex_variable_value_map.find(index);
+        if (it == this->_sub_nameindex_variable_value_map.end()) {
+            return std::nullopt;
+        } else {
+            return it->second;
+        }
+    } else {
+        auto it = this->_nameindex_variable_value_map.find(index);
+        if (it == this->_nameindex_variable_value_map.end()) {
+            return std::nullopt;
+        } else {
+            return it->second;
+        }
+    }
+}
+
+bool Serializer::isInternalNameIndex(const std::string &index) const
+{
+    // whether starts with _, if not, return false
+    if (!_is_global_variable_name_index(index)) {
+        return false;
+    }
+
+    // whether already exists in global, if not exists, return false
+    auto it = this->_global_nameindex_variable_value_map.find(index);
+    if (it == this->_global_nameindex_variable_value_map.end()) {
+        return false;
+    }
+
+    // whether is marked as internal, if not internal, return false
+    if (it->second.first == GlobalVariableType::Internal) {
+        return true;
+    } else {
+        return false;
+    }
+
+}
+
+void Serializer::processStatementList(const AstArray &statement_list)
 {
     for (const auto& statement : statement_list) {
         this->processStatement(statement.as_object());
@@ -167,8 +310,9 @@ double Serializer::getValueOfNumberIndexVariable(const AstObject &v)
     
     auto index_int = this->getNumberIndexOfNumberIndexVariable(v);
 
-    auto it = this->_numberindex_variable_value_map.find(index_int);
-    if (it == this->_numberindex_variable_value_map.end()) {
+    if (auto variable_value = this->existsAndGetVariable(index_int)) {
+        return variable_value.value();
+    } else {
         // variable not defined
 #ifdef NUMBERINDEX_VARIABLE_UNDEFINED_ERROR
         std::stringstream ss;
@@ -179,8 +323,6 @@ double Serializer::getValueOfNumberIndexVariable(const AstObject &v)
 #else // NOT NUMBERINDEX_VARIABLE_UNDEFINED_ERROR
         return 0;
 #endif // NUMBERINDEX_VARIABLE_UNDEFINED_ERROR
-    } else {
-        return it->second;
     }
 }
 
@@ -199,13 +341,9 @@ double Serializer::getValueOfNameIndexVariable(const AstObject &v)
 
     auto&& index_name = this->getNameIndexOfNameIndexVariable(v);
 
-    // TODO
-    /**
-     * 根据只读环境变量存取的后续实现，决定这里获取的时候需不需要加判断什么的
-    */
-
-    auto it = this->_nameindex_variable_value_map.find(index_name);
-    if (it == this->_nameindex_variable_value_map.end()) {
+    if (auto variable_value = this->existsAndGetVariable(index_name)) {
+        return variable_value.value();
+    } else {
 #ifdef NAMEINDEX_VARIABLE_UNDEFINED_ERROR
         std::stringstream ss;
         ss << "Use undefined nameIndexVariable:"
@@ -215,8 +353,6 @@ double Serializer::getValueOfNameIndexVariable(const AstObject &v)
 #else // NOT NAMEINDEX_VARIABLE_UNDEFINED_ERROR
         return 0;
 #endif // NAMEINDEX_VARIABLE_UNDEFINED_ERROR
-    } else {
-        return it->second;
     }
 }
 
@@ -305,10 +441,10 @@ double Serializer::getValueOfInsideFunctionExpression(const AstObject &expressio
         RS274LETTER_ASSERT_TYPE2(param, "nameIndexVariable", "numberIndexVariable");
         if (param.at("type").as_string() == "nameIndexVariable") {
             auto&& param_name_index = this->getNameIndexOfNameIndexVariable(param.as_object());
-            return this->hasVariable(param_name_index);
+            return this->existsAndGetVariable(param_name_index).has_value();
         } else {
             auto&& param_number_index = this->getNumberIndexOfNumberIndexVariable(param.as_object());
-            return this->hasVariable(param_number_index);
+            return this->existsAndGetVariable(param_number_index).has_value();
         }
     } else {
         RS274LETTER_ASSERT(param.is_object());
@@ -367,41 +503,15 @@ void Serializer::assignVariable(const AstObject &target, double value)
 {
     RS274LETTER_ASSERT_TYPE2(target, "numberIndexVariable", "nameIndexVariable");
     if (target.at("type").as_string() == "numberIndexVariable") {
+        // numberIndexVariable
         int target_index = this->getNumberIndexOfNumberIndexVariable(target);
 
-        // DEBUG
-        auto it = this->_numberindex_variable_value_map.find(target_index);
-        if (it != this->_numberindex_variable_value_map.end()) {
-            std::cout << "Override numberIndexVariable, index: " << target_index
-                << ", value:" << value << std::endl;
-        } else {
-            std::cout << "Define new numberIndexVariable, index: " << target_index
-                << ", value:" << value << std::endl;
-        }
-
-        this->_numberindex_variable_value_map[target_index] = value;
+        this->storeVariable(target_index, value);
     } else {
         // nameIndexVariable
         auto&& target_index = this->getNameIndexOfNameIndexVariable(target);
 
-        // TODO
-        /**
-         * 需要在这里check变量是否是全局只读的环境变量，
-         * 如果是普通的赋值操作，并尝试修改环境变量会报错
-         * 根据后续实现，这里可能还需要传参，允许解释命令时可以由程序内部隐式修改环境变量
-        */
-
-        // DEBUG
-        auto it = this->_nameindex_variable_value_map.find(target_index);
-        if (it != this->_nameindex_variable_value_map.end()) {
-            std::cout << "Override nameIndexVariable, index: " << target_index
-                << ", value:" << value << std::endl;
-        } else {
-            std::cout << "Define new nameIndexVariable, index: " << target_index
-                << ", value:" << value << std::endl;
-        }
-
-        this->_nameindex_variable_value_map[target_index] = value;
+        this->storeVariable(target_index, value);
     }
 }
 
@@ -418,6 +528,30 @@ std::optional<int> Serializer::_convert_to_integer(const double &d, bool not_neg
     } else {
         return std::nullopt;
     }
+}
+
+bool Serializer::_start_with_underline(const std::string &str)
+{
+    if (str.empty()) return false;
+    if (str[0] == '_') return true; else return false;
+}
+
+bool Serializer::_is_global_variable(const AstObject &variable)
+{
+    RS274LETTER_ASSERT_TYPE2(variable, "numberIndexVariable", "nameIndexVariable");
+    auto&& type = variable.at("type").as_string();
+
+    if (type == "numberIndexVariable") {
+        return false;
+    } else {
+        auto&& name_index = variable.at("index").as_string();
+        return _start_with_underline(name_index);
+    }
+}
+
+bool Serializer::_is_global_variable_name_index(const std::string &variable_index)
+{
+    return _start_with_underline(variable_index);
 }
 
 } // namespace rs274letter

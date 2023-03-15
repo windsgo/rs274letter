@@ -76,25 +76,38 @@ The number-indexed `#...` rules is the same as o-words `o...`.
     deal with the forward ADDITIVE_OPERATOR `+/-`.
 
 
-### relational operator
+### Relational operator
 
 Having the traditional `gt` `lt` `eq` `ne` `ge` `le`,
 I decided to ***temporarily*** support `>` `<` `>=` `<=` `==` `!=` in `[...]` expressions, because it might conflict the usage of `#<var>`.
 
-### logical operator
+### Logical operator
 
 Support `and` `or` `xor`
 
-### low, up case
+### Low, up case
 
 We only allow whole up-case keyword or whole low-case keyword, for example, `if` and `IF` are valid,
 while `iF` and `If` are not valid.
 
-### inside functions
+### Inside functions
 
 The same up-low-case rule as described above. Besides, the `EXISTS[]` function will return 0,
 if a number-indexed variable is not defined, which is different from linuxcnc rs274.
 
+### Variable environment rule
+
+- Global Variable:
+    
+    Global variable can be seen in all environments, internal variables cannot be assigned.
+
+- Sub Environment:
+
+    In a sub environment (wrapped in an o-sub block), you cannot see the non-global variable
+    outside the o-sub block. Only global variables can be seen, and the passed params are
+    put in the local variables in `#1`, `#2`, and so on, which starts with index `1`.
+
+    When a sub environment is exited, all local variable in the sub environment is cleared.
 
 ### if, while, do-while, sub
 
