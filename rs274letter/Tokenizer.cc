@@ -9,6 +9,8 @@
 #include <vector>
 
 #include <iostream> // debug output
+// #define TOKEN_DEBUG_OUTPUT
+#define COMMENT_STDOUT_OUTPUT
 
 namespace rs274letter
 {
@@ -177,12 +179,14 @@ Token Tokenizer::getNextToken() {
 
         auto&& token_value = token_value_opt.value();
         
+#ifdef TOKEN_DEBUG_OUTPUT
         if (token_type != "NULL")
             std::cout << "\t[DEBUG]: " 
                 // << "Match regex: " << "\033[33m" << raw_pattern_str  << "\033[0m"
                 << "\ttype: " << "\033[32m" << token_type << "\033[0m"
                 << ",\tvalue: " << "[" << "\033[7m" << (token_type == "RTN" ? "\\n" : token_value) << "\033[0m" << "]" 
                 << std::endl;
+#endif // TOKEN_DEBUG_OUTPUT
 
         this->_cur += token_value.size(); // set the cursor to the begin of the next possible token
         this->_cur_col += token_value.size();
@@ -191,6 +195,14 @@ Token Tokenizer::getNextToken() {
             ++(this->_cur_line);
             this->_cur_col = 1;
         }
+
+#ifdef COMMENT_STDOUT_OUTPUT
+
+        if (token_type == "CMT;" || token_type == "CMT()") {
+            std::cout << this->_cur_line << "\t[COMMENT]: " << token_value << std::endl;
+        }
+
+#endif // COMMENT_STDOUT_OUTPUT
 
         if (_should_skip_token_type(token_type)) {
             return this->getNextToken(); // skip "null" token, give the next none-"null" token, recursively

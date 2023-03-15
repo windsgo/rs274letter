@@ -38,10 +38,12 @@ The number-indexed `#...` rules is the same as o-words `o...`.
 
 - Value of assignment expression
   
-    In traditional RS274, `#1=[#2=3]` will not pass the syntax examine, but I'll make the
+    In traditional RS274, `#1=[#2=3]` will not pass the syntax examine, but I may make the
     assignment expression have a value which is equal to the assigned variable. 
 
     In this case, `#1=[#2=3]` will be parsed as `3` -> `#2`, and then `#2` -> `#1`.
+
+    *However*, this is ***disabled*** by the define `DO_NOT_ALLOW_MULTIPLE_ASSIGN`.
 
 - Expression-statement syntax
     

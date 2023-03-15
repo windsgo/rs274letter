@@ -19,6 +19,9 @@ target_compile_definitions(rs274letter PRIVATE NO_SINGLE_NON_ASSIGN_EXPRESSION)
 # 不允许赋值表达式右侧非primary expression, 如#1 = #2 + 1为非法，需写为#1 = [#2 + 1]
 target_compile_definitions(rs274letter PRIVATE MUST_PRIMARY_RIGHT_HANDSIDE_OF_ASSIGN)
 
+# 不允许赋值表达式产生值，即不允许连续赋值，如#1 = [#2 = 3]，#1 = [#2 + [#3 = 1]]为非法
+target_compile_definitions(rs274letter PRIVATE DO_NOT_ALLOW_MULTIPLE_ASSIGN)
+
 # 在o和#后面跟的直接指定为primaryExpression，即允许跟正负号+/-，允许跟字面浮点数(检查时再计算其是否
 # 符合tolerance，符合退化为整数)
 target_compile_definitions(rs274letter PRIVATE NAMEINDEX_JUST_PRIMARYEXPRESSION)

@@ -18,10 +18,14 @@
 int main(int argc, char** argv) {
     rs274letter::util::ElapsedTimer timer("main");
     std::string code = R"(
-        #5 = [#6 = 123]
+        #5 = 123;2
+        #6 = 123
         #<_abc_> = [#5 GT 12.34]
         #<abc_> = [#<_abc_> * 10 / 5]
         #<__abc_> = [#<_abc_> * 100 / 5]
+        #<ccc> = #<_test_global>
+        #<_ccc> = #<_test_global>
+        ;#<_test_global> = 111
         G55G90G01X#5Y[-#6]A-#<_abc_>B.65C121.95F100
         o1 if [#5 EQ123.0]
             #6 = [9**0.5]
@@ -46,6 +50,21 @@ int main(int argc, char** argv) {
         #25 = exists[#<_abc>]
         #26 = exists[#100]
         E[sin[30]]
+
+        #<c> = 0
+        #<d> = 0
+        o2 while [#<c> LT 10]
+            #<c> = [#<c> + 1]
+            o3 while [1]
+                o4 if [#<c> GT 5]
+                #<d> = [#<d> + 10]
+                o3 break
+                o4 endif
+                #<d> = [#<d> + 1]
+                o3 break
+            o3 endwhile
+
+        o2 endwhile
     )";
 
     rs274letter::AstObject program;

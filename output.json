@@ -35,6 +35,96 @@
         "type": "assignmentExpression"
       },
       "type": "expressionStatement"
+    },
+    {
+      "expression": {
+        "left": {
+          "index": {
+            "type": "integerNumericLiteral",
+            "value": 2
+          },
+          "type": "numberIndexVariable"
+        },
+        "operator": "=",
+        "right": {
+          "left": {
+            "index": {
+              "type": "integerNumericLiteral",
+              "value": 3
+            },
+            "type": "numberIndexVariable"
+          },
+          "operator": "+",
+          "right": {
+            "type": "integerNumericLiteral",
+            "value": 1
+          },
+          "type": "binaryExpression"
+        },
+        "type": "assignmentExpression"
+      },
+      "type": "expressionStatement"
+    },
+    {
+      "callOCommand": {
+        "index": {
+          "index": {
+            "type": "integerNumericLiteral",
+            "value": 2
+          },
+          "type": "numberIndexVariable"
+        },
+        "type": "numberIndexOCommand"
+      },
+      "paramList": [
+        {
+          "type": "integerNumericLiteral",
+          "value": 1
+        },
+        {
+          "type": "integerNumericLiteral",
+          "value": 2
+        }
+      ],
+      "type": "oCallStatement"
+    },
+    {
+      "callOCommand": {
+        "index": {
+          "left": {
+            "index": {
+              "type": "integerNumericLiteral",
+              "value": 3
+            },
+            "type": "numberIndexVariable"
+          },
+          "operator": "+",
+          "right": {
+            "type": "integerNumericLiteral",
+            "value": 1
+          },
+          "type": "binaryExpression"
+        },
+        "type": "numberIndexOCommand"
+      },
+      "paramList": [
+        {
+          "left": {
+            "index": {
+              "type": "integerNumericLiteral",
+              "value": 2
+            },
+            "type": "numberIndexVariable"
+          },
+          "operator": "-",
+          "right": {
+            "type": "integerNumericLiteral",
+            "value": 1
+          },
+          "type": "binaryExpression"
+        }
+      ],
+      "type": "oCallStatement"
     }
   ],
   "type": "program"

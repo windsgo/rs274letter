@@ -86,6 +86,7 @@ public:
 */
 class Serializer {
 public:
+    using ptr = std::shared_ptr<Serializer>;
     ~Serializer() noexcept = default;
 
     Serializer() noexcept = default;
@@ -110,6 +111,8 @@ public:
          *    并在处理commandStatement时修改对应变量
          * 2. 初始化全局环境,如坐标系,运动模式,进给速度,等
         */
+
+        this->storeVariable("_test_global", 1001, true);
     }
 
     inline void clear() {
@@ -124,6 +127,8 @@ public:
         this->_sub_nameindex_variable_value_map.clear();
         this->_sub_numberindex_variable_value_map.clear();
         this->_global_nameindex_variable_value_map.clear();
+
+        this->_is_in_sub = false;
     }
 
 public:
@@ -156,9 +161,10 @@ public:
         return this->_command_statement_list;
     }
 
-    inline void processProgram() {
-        this->processStatementList(this->_parse_result.at("body").as_array());
-    }
+    /**
+     * @brief process the whole parse_result
+    */
+    void processProgram();
 
     template <typename T>
     std::optional<double> hasVariable(const T& key) const {
@@ -178,17 +184,17 @@ public:
 
         ss << "normal number indexed:\n";
         for (const auto& i : this->_numberindex_variable_value_map) {
-            ss << i.first << ": " << i.second << "\n";
+            ss << i.first << ":\t" << i.second << "\n";
         }
 
         ss << "normal name indexed:\n";
         for (const auto& i : this->_nameindex_variable_value_map) {
-            ss << i.first << ": " << i.second << "\n";
+            ss << i.first << ":\t" << i.second << "\n";
         }
 
         ss << "global:\n";
         for (const auto& i : this->_global_nameindex_variable_value_map) {
-            ss << i.first << ": " << i.second.second << ", "
+            ss << i.first << ":\t" << i.second.second << ", "
             << (i.second.first == GlobalVariableType::Internal ? "Internal" : "Normal") 
             << "\n";
         }
@@ -209,20 +215,48 @@ private:
      * @throw If anything wrong, will throw exception, since it is a statement error 
     */
 
+    /**
+     * @brief Store value to a name-indexed variable. Determine whether it is
+     * sub environment or not inside automatically.
+     * @param index name_index string
+     * @param value stored value
+     * @param assign_internal set true if it is an internal-assign, default false
+     * @throw if assign to an internal value without assign_internal=true
+    */
     void storeVariable(const std::string& index, double value, bool assign_internal = false);
+
+    /**
+     * @brief Store value to a number-indexed variable. Determine whether it is
+     * sub environment or not inside automatically.
+     * @param index number_index int
+     * @param value stored value
+    */
     void storeVariable(int index, double value);
 
-    // if exists the index, return the value, differs whether in the sub or not
-    std::optional<double>
-    existsAndGetVariable(int index) const;
-    std::optional<double>
-    existsAndGetVariable(const std::string& index) const;
+    /**
+     * @brief try to get the value of a number-indexed variable. Determine whether
+     * it is sub environment or not inside automatically.
+     * @param index number_index int
+     * @return std::nullopt if not exist, otherwise the std::optional will hold
+     * the found value
+    */
+    std::optional<double> existsAndGetVariable(int index) const;
+
+    /**
+     * @brief try to get the value of a name-indexed variable. Determine whether
+     * it is sub environment or not inside automatically.
+     * @param index name_index string
+     * @return std::nullopt if not exist, otherwise the std::optional will hold
+     * the found value
+    */
+    std::optional<double> existsAndGetVariable(const std::string& index) const;
 
     /**
      * @brief returns true if the index is a global index (starts with '_')
      * `AND` the index exists in the _global_var_map
      * `AND` the found exist variable is marked as `Internal`.
      * Otherwise returns false;
+     * @param index name_index string
     */
     bool isInternalNameIndex(const std::string& index) const;
 
@@ -230,6 +264,29 @@ private:
     /**************************/
     /*** process statements ***/
     /**************************/
+
+    /**
+     * @brief produce a flow jump control
+     * Used to record the current flow_jump_statement waiting wo be consumed
+    */
+    void produceFlowControl(const AstObject& flow_jump_statement);
+
+    /**
+     * @brief try to consume the flow control produced
+     * It should be called after the while statement receive a RETURN_STATE_NEED_CONTINUE
+     * or RETURN_STATE_NEED_BREAK or FLOW_STATE_NEED_RETURN
+     * @throw throw if flow_jump type is matched but o-words do not match 
+     * @note:
+     *  - if currently flow state is normal, this does nothing
+     *  - if currently flow state isn't normal, and is not while-break or while-continue
+     *    or sub-return, this does nothing
+     *  - if currently flow state isn't normal, and match while-break or while-continue
+     *    or sub-return, but o-words doesn't match, throw
+     *  - if currently flow state isn't normal, and match while-break or while-continue
+     *    or sub-return, and o-words all match, will set current_flow state to normal,
+     *    and clear the current flow_jump_statement
+    */
+    void consumeFlowControl(const AstObject& this_current_statement);
 
     /**
      * @brief process a statement list
@@ -257,7 +314,7 @@ private:
      * This will do all the assignments in the expression statement,
      * store the assigned target value into the internal variable maps
     */
-    double processExpressionStatement(const AstObject& expression_statement);
+    void processExpressionStatement(const AstObject& expression_statement);
     
     /**
      * @brief process the o-if statement.
@@ -266,6 +323,18 @@ private:
      * @throw If `test` can not be calculated as a value
     */
     void processOIfStatement(const AstObject& o_if_statement);
+
+    /**
+     * @brief process the o-while statement.
+     * @throw any error or the single while loop times is larger than allowed.
+    */
+    void processOWhileStatement(const AstObject& o_while_statement);
+
+    /**
+     * 
+    */
+    void processOContinueStatement(const AstObject& o_continue_statement);
+    void processOBreakStatement(const AstObject& o_break_statement);
 
     /**************************/
     /*** astnode value get  ***/
@@ -292,31 +361,69 @@ private:
 
     /**
      * @brief get the calculated index value of a number-indexed variable
-     * @param v the number-indexed variable
+     * @param variable the number-indexed variable
     */
     int getNumberIndexOfNumberIndexVariable(const AstObject& variable);
+
     /**
      * @brief get the calculated value of a number-indexed variable
      * @param v the number-indexed variable
     */
     double getValueOfNumberIndexVariable(const AstObject& v);
- 
+    
+    /**
+     * @brief get the name-index string of a name-indexed variable
+     * @param variable the name-indexed variable
+    */
     std::string getNameIndexOfNameIndexVariable(const AstObject& variable);
+
+    /**
+     * @brief get the calculated value of a name-indexed variable
+     * @param v the name-indexed variable
+    */
     double getValueOfNameIndexVariable(const AstObject& v);
 
+    /**
+     * @brief get the calculated value of a binaryExpression
+    */
     double getValueOfBinaryExpression(const AstObject& expression);
 
+    /**
+     * @brief get the calculated value of an insideFunctionExpression
+    */
     double getValueOfInsideFunctionExpression(const AstObject& expression);
 
+    /**
+     * @brief get the calculated value of an assignmentExpression
+    */
     double getValueOfAssignmentExpression(const AstObject& expression);
+
+    /**
+     * @brief assign value to target, target should be a variable currently,
+     * this is called by the getValueOfAssignmentExpression() while processing
+    */
     void assignVariable(const AstObject& target, double value);
 
 private: // private status function, just easier for further revise
+    /**
+     * @brief returns if is in the sub_environment
+    */
     inline bool _isInSubEnvironment() const { return _is_in_sub; }
 
 private: // static 
     // helper functions
+    /**
+     * @brief returns if `d` is within the tolerance to the nearest integer
+    */
     static bool _is_within_tolerance(const double& d);
+
+    /**
+     * @brief convert a double to integer
+     * @param not_negative if should be non-negative (>=0), set it to true, default false
+     * @return std::nullopt if cannot convert, either because not within tolerance or 
+     * because of the flag `not_negative`. Otherwise the std::optional holds the converted
+     * integer.
+    */
     static std::optional<int> _convert_to_integer(const double& d, bool not_negative = true);
 
     // these functions simply help to tell whether a variable `LOOKS LIKE` a global variable
@@ -347,6 +454,15 @@ private:
     // environment and status
     bool _is_in_sub = false; // if is in a sub environment
 
+    enum FlowState {
+        FLOW_STATE_NORMAL = 0,
+        FLOW_STATE_NEED_CONTINUE, // tell the caller need to consume a continue
+        FLOW_STATE_NEED_BREAK, // tell the caller need to consume a break
+        FLOW_STATE_NEED_RETURN // tell the caller need to consume a return
+    };
+
+    FlowState _current_flow_state = FlowState::FLOW_STATE_NORMAL;
+    AstObject _current_flow_control_statement;
 
 private:
     std::list<CommandStatement> _command_statement_list;

@@ -122,6 +122,8 @@ AstArray Parser::statementList(const std::optional<std::vector<TokenType>>& stop
 AstObject Parser::statement()
 {
     auto&& lookahead_type = Tokenizer::GetTokenType(this->_lookahead);
+    // auto curline = this->_tokenizer->getCurLine();
+
     if (lookahead_type == "RTN") {
         // return this->emptyStatement();
         // we see emptyStatement as a real `empty`
@@ -831,8 +833,11 @@ AstObject Parser::insideFunctionExpression()
 AstObject Parser::parenthesizedExpression()
 {
     this->eat("[");
-
+#ifdef DO_NOT_ALLOW_MULTIPLE_ASSIGN
+    auto&& expression = this->logicalExpression();
+#else // NOT DO_NOT_ALLOW_MULTIPLE_ASSIGN
     auto&& expression = this->expression(); 
+#endif // DO_NOT_ALLOW_MULTIPLE_ASSIGN
     RS274LETTER_ASSERT(!expression.empty()); // inside the [ ] should be an expression which should be empty
          
     this->eat("]");

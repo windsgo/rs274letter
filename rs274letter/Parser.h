@@ -31,7 +31,6 @@ using AstObject = json::object;
 using AstArray = json::array;
 
 class Parser {
-    // friend class _BackupParserState;
 public:
     ~Parser() noexcept = default;
 

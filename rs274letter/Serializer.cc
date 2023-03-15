@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <iostream>
 
-#define VARIABLE_DEBUG_OUPUT
+// #define VARIABLE_DEBUG_OUPUT
 
 namespace rs274letter
 {
@@ -25,7 +25,11 @@ static double _deg2rad(double reg) {
 #define RS274LETTER_ASSERT_TYPE2(v, type1, type2) \
     RS274LETTER_ASSERT(v.at("type").as_string() == type1 || v.at("type").as_string() == type2)
 
-void Serializer::storeVariable(const std::string &index, double value, bool assign_internal/* = false*/)
+void Serializer::processProgram() {
+    this->processStatementList(this->_parse_result.at("body").as_array());
+}
+
+void Serializer::storeVariable(const std::string &index, double value, bool assign_internal /* = false*/)
 {
 #ifdef VARIABLE_DEBUG_OUPUT
     const char* env = this->_isInSubEnvironment() ? "[Sub]" : "[Normal]";
@@ -167,6 +171,78 @@ bool Serializer::isInternalNameIndex(const std::string &index) const
 
 }
 
+void Serializer::produceFlowControl(const AstObject &flow_jump_statement)
+{   
+    RS274LETTER_ASSERT(this->_current_flow_state == FlowState::FLOW_STATE_NORMAL);
+    auto&& type = flow_jump_statement.at("type").as_string();
+
+    if (type == "oContinueStatement") {
+        this->_current_flow_state = FlowState::FLOW_STATE_NEED_CONTINUE;
+    } else if (type == "oBreakStatement") {
+        this->_current_flow_state = FlowState::FLOW_STATE_NEED_BREAK;
+    } else if (type == "oReturnStatement") {
+        this->_current_flow_state = FlowState::FLOW_STATE_NEED_RETURN;
+    } else {
+        RS274LETTER_ASSERT2(false, "not a valid flow control statement");
+    }
+
+    this->_current_flow_control_statement = flow_jump_statement;
+}
+
+void Serializer::consumeFlowControl(const AstObject &this_current_statement)
+{
+    if (this->_current_flow_state == FlowState::FLOW_STATE_NORMAL) {
+        RS274LETTER_ASSERT(this->_current_flow_control_statement.empty());
+        std::cout << "[DEBUG] consume flow control does nothing(normal state): " << std::endl;
+        return;
+    }
+
+    RS274LETTER_ASSERT(!this->_current_flow_control_statement.empty());
+
+    auto&& cur_statement_type = this_current_statement.at("type").as_string();
+    auto&& jump_type = this->_current_flow_control_statement.at("type").as_string();
+
+    std::stringstream ss;
+
+    if (cur_statement_type == "oWhileStatement") {
+        switch (this->_current_flow_state)
+        {
+        case FlowState::FLOW_STATE_NORMAL:
+            RS274LETTER_ASSERT(false);
+        case FlowState::FLOW_STATE_NEED_RETURN:
+            return;
+        case FlowState::FLOW_STATE_NEED_CONTINUE:
+        case FlowState::FLOW_STATE_NEED_BREAK:
+            // examine layers and o-words
+            // TODO, 还要实现o-word相关的计算、比较函数
+
+            this->_current_flow_control_statement.clear();
+            this->_current_flow_state = FlowState::FLOW_STATE_NORMAL;
+            return;
+        }
+    } else if (cur_statement_type == "oSubStatement") {
+        switch (this->_current_flow_state)
+        {
+        case FlowState::FLOW_STATE_NORMAL:
+            RS274LETTER_ASSERT(false);
+        case FlowState::FLOW_STATE_NEED_CONTINUE:
+        case FlowState::FLOW_STATE_NEED_BREAK:
+            return;
+        case FlowState::FLOW_STATE_NEED_RETURN:
+            // examine layers and o-words
+            // TODO, 还要实现o-word相关的计算、比较函数
+
+            this->_current_flow_control_statement.clear();
+            this->_current_flow_state = FlowState::FLOW_STATE_NORMAL;
+            return;
+        }
+    } else {
+        std::cout << "[DEBUG] consume flow control does nothing, " 
+            << "statement_type: " << cur_statement_type
+            << "\njump_type: " << jump_type << std::endl;
+    }
+}
+
 void Serializer::processStatementList(const AstArray &statement_list)
 {
     for (const auto& statement : statement_list) {
@@ -176,6 +252,9 @@ void Serializer::processStatementList(const AstArray &statement_list)
 
 void Serializer::processStatement(const AstObject& statement)
 {
+    // if is jumping flow, just return here, do nothing
+    if (this->_current_flow_state != FlowState::FLOW_STATE_NORMAL) return;
+
     auto&& statement_type = statement.at("type").as_string();
 
     if (statement_type == "expressionStatement") {
@@ -184,6 +263,12 @@ void Serializer::processStatement(const AstObject& statement)
         this->processCommandStatement(statement);
     } else if (statement_type == "oIfStatement") {
         this->processOIfStatement(statement);
+    } else if (statement_type == "oWhileStatement") {
+        this->processOWhileStatement(statement);
+    } else if (statement_type == "oContinueStatement") {
+        this->processOContinueStatement(statement);
+    } else if (statement_type == "oBreakStatement") {
+        this->processOBreakStatement(statement);
     } else { // TODO
         std::stringstream ss;
         ss << "Unknown type of statement:" 
@@ -220,10 +305,10 @@ void Serializer::processCommandStatement(const AstObject &command_statement)
     this->_command_statement_list.emplace_back(std::move(cs));
 }
 
-double Serializer::processExpressionStatement(const AstObject &expression_statement)
+void Serializer::processExpressionStatement(const AstObject &expression_statement)
 {
     RS274LETTER_ASSERT_TYPE(expression_statement, "expressionStatement");
-    return this->getValue(expression_statement.at("expression").as_object());
+    this->getValue(expression_statement.at("expression").as_object());
 }
 
 void Serializer::processOIfStatement(const AstObject &o_if_statement)
@@ -240,6 +325,46 @@ void Serializer::processOIfStatement(const AstObject &o_if_statement)
     } else {
         this->processStatementList(o_if_statement.at("alternate").as_array());
     }
+}
+
+void Serializer::processOWhileStatement(const AstObject &o_while_statement)
+{
+    RS274LETTER_ASSERT_TYPE(o_while_statement, "oWhileStatement");
+
+    std::size_t loop_times = 0;
+    std::stringstream ss;
+    while (this->getValue(o_while_statement.at("test").as_object())) {
+        ++loop_times;
+        // protect infinite loop
+        if (loop_times > _s_max_loop_times) {
+            ss << "While Statement loop times too large," 
+               << "now: " << loop_times
+               << ", allowed:" << _s_max_loop_times;
+            throw SerializerError(ss.str());
+        }
+        this->processStatementList(o_while_statement.at("body").as_array());
+
+        // examine the flow state
+        if (this->_current_flow_state == FlowState::FLOW_STATE_NEED_BREAK) {
+            this->consumeFlowControl(o_while_statement);
+            break;
+        } else if (this->_current_flow_state == FlowState::FLOW_STATE_NEED_CONTINUE) {
+            this->consumeFlowControl(o_while_statement);
+            continue;
+        }
+    }
+}
+
+void Serializer::processOContinueStatement(const AstObject &o_continue_statement)
+{
+    RS274LETTER_ASSERT_TYPE(o_continue_statement, "oContinueStatement");
+    this->produceFlowControl(o_continue_statement);
+}
+
+void Serializer::processOBreakStatement(const AstObject &o_break_statement)
+{
+    RS274LETTER_ASSERT_TYPE(o_break_statement, "oBreakStatement");
+    this->produceFlowControl(o_break_statement);
 }
 
 double Serializer::getValue(const AstObject &expression)
