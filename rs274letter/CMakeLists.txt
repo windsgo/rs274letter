@@ -20,6 +20,7 @@ target_compile_definitions(rs274letter PRIVATE NO_SINGLE_NON_ASSIGN_EXPRESSION)
 target_compile_definitions(rs274letter PRIVATE MUST_PRIMARY_RIGHT_HANDSIDE_OF_ASSIGN)
 
 # 不允许赋值表达式产生值，即不允许连续赋值，如#1 = [#2 = 3]，#1 = [#2 + [#3 = 1]]为非法
+# 为了防止在检查o-word值时重新赋值，导致变量错误，如果取消此定义，o-word不再检查
 target_compile_definitions(rs274letter PRIVATE DO_NOT_ALLOW_MULTIPLE_ASSIGN)
 
 # 在o和#后面跟的直接指定为primaryExpression，即允许跟正负号+/-，允许跟字面浮点数(检查时再计算其是否
@@ -30,6 +31,9 @@ target_compile_definitions(rs274letter PRIVATE NAMEINDEX_JUST_PRIMARYEXPRESSION)
 target_compile_definitions(rs274letter PRIVATE NUMBERINDEX_VARIABLE_UNDEFINED_ERROR)
 # 引用到name_index variable时如果未定义就抛出异常，否则返回0
 target_compile_definitions(rs274letter PRIVATE NAMEINDEX_VARIABLE_UNDEFINED_ERROR)
+
+# 内部删除变量时，如果删除了未定义的变量，定义THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE用以throw
+target_compile_definitions(rs274letter PRIVATE THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE)
 
 target_include_directories(rs274letter PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>

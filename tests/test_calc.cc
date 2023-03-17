@@ -65,6 +65,22 @@ int main(int argc, char** argv) {
             o3 endwhile
 
         o2 endwhile
+
+        #50 = 30
+        #<_global_var_1> = 0
+        o[#50] sub
+            #<_global_var_1> = #1
+            ;o30 return [1111]
+            o222 while [1]
+                o333 if [1]
+                    o222 break
+                o333 else
+                o333 endif
+                o30 return [3.14 * 100]
+            o222 endwhile
+        o[#50] endsub [1]
+
+        o30 call [3.14]
     )";
 
     rs274letter::AstObject program;
@@ -100,11 +116,11 @@ int main(int argc, char** argv) {
         std::cout << s.getAllVariablesPrinted() << std::endl;
         
     } 
-    catch (rs274letter::Exception& e) {
-        std::cout << "rs274:\n" << e.what() << std::endl;
-    } catch (std::exception& e) {
-        std::cout << e.what() << std::endl;
-    } 
+    // catch (rs274letter::Exception& e) {
+    //     std::cout << "rs274:\n" << e.what() << std::endl;
+    // } catch (std::exception& e) {
+    //     std::cout << e.what() << std::endl;
+    // } 
     catch (int i) {}
 
     // double x = 0.00f;

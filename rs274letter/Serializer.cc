@@ -25,8 +25,152 @@ static double _deg2rad(double reg) {
 #define RS274LETTER_ASSERT_TYPE2(v, type1, type2) \
     RS274LETTER_ASSERT(v.at("type").as_string() == type1 || v.at("type").as_string() == type2)
 
-void Serializer::processProgram() {
+void Serializer::initInternalVariables()
+{
+    // subroutine return state initialize
+    // these are cleared to 0 just before the next subroutine call
+    this->storeVariable("_value", 0, true); // the value returned by sub routine
+    this->storeVariable("_value_returned", 0, true); // 0 or 1, whether a value is returned
+
+    this->storeVariable("_test_global", 1001, true);
+}
+
+void Serializer::processProgram()
+{
     this->processStatementList(this->_parse_result.at("body").as_array());
+}
+
+void Serializer::deleteVariable(const std::string &index)
+{
+#ifdef VARIABLE_DEBUG_OUPUT
+    const char* env = this->_isInSubEnvironment() ? "[Sub]" : "[Normal]";
+    if (auto old = this->existsAndGetVariable(index)) {
+        std::cout << env
+            <<"Deleting nameIndexVariable, index: " << index
+            << ", old_value: " << old.value() << std::endl;
+    } else {
+        std::cout << env
+            << "Deleting undefined nameIndexVariable, index: " << index
+            << std::endl;
+    }
+#endif
+
+#ifdef THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+    std::stringstream ss;
+#endif
+
+    // examine whether the index stands for a global index
+    if (_is_global_variable_name_index(index)) {
+        // global index
+        auto it = this->_global_nameindex_variable_value_map.find(index);
+
+        if (it == this->_global_nameindex_variable_value_map.end()) {
+#ifdef THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            ss << "Internal Error: delete an undefined name-variable in global:"
+               << index;
+            throw SerializerError(ss.str());
+#else // NOT THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            return;
+#endif // THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+        } else {
+            this->_global_nameindex_variable_value_map.erase(it);
+        }
+        return;
+    }
+
+    if (this->_isInSubEnvironment()) {
+        // In a sub-environment
+        auto it = this->_sub_nameindex_variable_value_map.find(index);
+
+        if (it == this->_sub_nameindex_variable_value_map.end()) {
+#ifdef THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            ss << "Internal Error: delete an undefined name-variable in sub:"
+               << index;
+            throw SerializerError(ss.str());
+#else // NOT THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            return;
+#endif // THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+        } else {
+            this->_sub_nameindex_variable_value_map.erase(it);
+        }
+    } else {   
+        // Not in a sub-environment
+        auto it = this->_nameindex_variable_value_map.find(index);
+
+        if (it == this->_nameindex_variable_value_map.end()) {
+#ifdef THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            ss << "Internal Error: delete an undefined name-variable in normal:"
+               << index;
+            throw SerializerError(ss.str());
+#else // NOT THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            return;
+#endif // THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+        } else {
+            this->_nameindex_variable_value_map.erase(it);
+        }
+    }
+}
+
+void Serializer::deleteVariable(int index)
+{
+#ifdef VARIABLE_DEBUG_OUPUT
+    const char* env = this->_isInSubEnvironment() ? "[Sub]" : "[Normal]";
+    if (auto old = this->existsAndGetVariable(index)) {
+        std::cout << env
+            <<"Deleting numberIndexVariable, index: " << index
+            << ", old_value: " << old.value() << std::endl;
+    } else {
+        std::cout << env
+            << "Deleting undefined numberIndexVariable, index: " << index
+            << std::endl;
+    }
+#endif
+
+#ifdef THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+    std::stringstream ss;
+#endif
+
+    if (this->_isInSubEnvironment()) {
+        // In a sub-environment
+        auto it = this->_sub_numberindex_variable_value_map.find(index);
+
+        if (it == this->_sub_numberindex_variable_value_map.end()) {
+#ifdef THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            ss << "Internal Error: delete an undefined number-variable in sub:"
+               << index;
+            throw SerializerError(ss.str());
+#else // NOT THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            return;
+#endif // THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+        } else {
+            this->_sub_numberindex_variable_value_map.erase(it);
+        }
+    } else {   
+        // Not in a sub-environment
+        auto it = this->_numberindex_variable_value_map.find(index);
+
+        if (it == this->_numberindex_variable_value_map.end()) {
+#ifdef THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            ss << "Internal Error: delete an undefined number-variable in normal:"
+               << index;
+            throw SerializerError(ss.str());
+#else // NOT THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+            return;
+#endif // THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE
+        } else {
+            this->_numberindex_variable_value_map.erase(it);
+        }
+    }
+}
+
+void Serializer::clearVariable(const std::string &index, bool assign_internal/*=false*/)
+{
+    this->storeVariable(index, 0, assign_internal);
+}
+
+void Serializer::clearVariable(int index)
+{
+    this->storeVariable(index, 0);
 }
 
 void Serializer::storeVariable(const std::string &index, double value, bool assign_internal /* = false*/)
@@ -220,7 +364,7 @@ void Serializer::consumeFlowControl(const AstObject &this_current_statement)
             this->_current_flow_state = FlowState::FLOW_STATE_NORMAL;
             return;
         }
-    } else if (cur_statement_type == "oSubStatement") {
+    } else if (cur_statement_type == "oCallStatement") {
         switch (this->_current_flow_state)
         {
         case FlowState::FLOW_STATE_NORMAL:
@@ -229,8 +373,19 @@ void Serializer::consumeFlowControl(const AstObject &this_current_statement)
         case FlowState::FLOW_STATE_NEED_BREAK:
             return;
         case FlowState::FLOW_STATE_NEED_RETURN:
-            // examine layers and o-words
+            // examine o-words
             // TODO, 还要实现o-word相关的计算、比较函数
+
+            // return value
+            RS274LETTER_ASSERT(jump_type == "oReturnStatement");
+            auto&& return_expression = this->_current_flow_control_statement.at("returnRtnExpr").as_object();
+            if (return_expression.empty()) {
+                this->storeVariable("_value_returned", 0, true);
+            } else {
+                this->storeVariable("_value_returned", 1, true);
+                double return_value = this->getValue(return_expression);
+                this->storeVariable("_value", return_value, true);
+            }
 
             this->_current_flow_control_statement.clear();
             this->_current_flow_state = FlowState::FLOW_STATE_NORMAL;
@@ -253,6 +408,9 @@ void Serializer::processStatementList(const AstArray &statement_list)
 void Serializer::processStatement(const AstObject& statement)
 {
     // if is jumping flow, just return here, do nothing
+    // since we always call this function to process statements
+    // we do the flow return examine here
+    // if the current state isn't normal, do nothing but just return
     if (this->_current_flow_state != FlowState::FLOW_STATE_NORMAL) return;
 
     auto&& statement_type = statement.at("type").as_string();
@@ -269,6 +427,12 @@ void Serializer::processStatement(const AstObject& statement)
         this->processOContinueStatement(statement);
     } else if (statement_type == "oBreakStatement") {
         this->processOBreakStatement(statement);
+    } else if (statement_type == "oSubStatement") {
+        this->processOSubStatement(statement);
+    } else if (statement_type == "oReturnStatement") {
+        this->processOReturnStatement(statement);
+    } else if (statement_type == "oCallStatement") {
+        this->processOCallStatement(statement);
     } else { // TODO
         std::stringstream ss;
         ss << "Unknown type of statement:" 
@@ -351,6 +515,8 @@ void Serializer::processOWhileStatement(const AstObject &o_while_statement)
         } else if (this->_current_flow_state == FlowState::FLOW_STATE_NEED_CONTINUE) {
             this->consumeFlowControl(o_while_statement);
             continue;
+        } else if (this->_current_flow_state == FlowState::FLOW_STATE_NEED_RETURN) {
+            return;
         }
     }
 }
@@ -365,6 +531,109 @@ void Serializer::processOBreakStatement(const AstObject &o_break_statement)
 {
     RS274LETTER_ASSERT_TYPE(o_break_statement, "oBreakStatement");
     this->produceFlowControl(o_break_statement);
+}
+
+void Serializer::processOSubStatement(const AstObject &o_sub_statement)
+{
+    RS274LETTER_ASSERT_TYPE(o_sub_statement, "oSubStatement");
+    // Here just simply store the substatement for further call
+    // use the o-index which is calced now
+
+    auto&& sub_o_word = o_sub_statement.at("subOCommand").as_object();
+    auto&& sub_o_word_type = sub_o_word.at("type").as_string();
+
+    if (sub_o_word_type == "nameIndexOCommand") {
+        // nameIndexOCommand
+        this->_nameindex_o_substatement_map[sub_o_word.at("index").as_string()] = o_sub_statement;
+    } else {
+        // numberIndexOCommand
+        this->_numberindex_o_substatement_map[this->getValue(sub_o_word.at("index").as_object())] = o_sub_statement;
+    }
+
+    // TODO
+    // examine the "endsubOCommand"
+}
+
+void Serializer::processOReturnStatement(const AstObject &o_return_statement)
+{
+    RS274LETTER_ASSERT_TYPE(o_return_statement, "oReturnStatement");
+    this->produceFlowControl(o_return_statement);
+}
+
+void Serializer::processOCallStatement(const AstObject &o_call_statement)
+{
+    RS274LETTER_ASSERT_TYPE(o_call_statement, "oCallStatement");
+    
+    // clear the #<_value> and #<_value_returned>
+    this->clearVariable("_value", true);
+    this->clearVariable("_value_returned", true);
+
+    // calc the o-word index and find the stored substatement
+    auto&& call_o_word = o_call_statement.at("callOCommand").as_object();
+    auto&& call_o_word_type = call_o_word.at("type").as_string();
+
+    std::stringstream ss;
+    AstObject substatement;
+    if (call_o_word_type == "nameIndexOCommand") {
+        auto&& index = call_o_word.at("index").as_string();
+        auto it = this->_nameindex_o_substatement_map.find(index);
+        if (it == this->_nameindex_o_substatement_map.end()) {
+            ss << "Undefined o-call subject: type: " << call_o_word_type 
+               << ", index: " << index;
+            throw SerializerError(ss.str());
+        }
+        substatement = it->second;
+    } else {
+        // numberIndexOCommand
+        double index = this->getValue(call_o_word.at("index").as_object());
+        auto it = this->_numberindex_o_substatement_map.find(index);
+        if (it == this->_numberindex_o_substatement_map.end()) {
+            ss << "Undefined o-call subject: type: " << call_o_word_type 
+               << ", index: " << index;
+            throw SerializerError(ss.str());
+        }
+        substatement = it->second;
+    }
+
+    auto&& body = substatement.at("body").as_array();
+
+    // set the in-sub flag
+    this->_is_in_sub = true;
+    
+    RS274LETTER_ASSERT(this->_sub_nameindex_variable_value_map.empty());
+    RS274LETTER_ASSERT(this->_sub_numberindex_variable_value_map.empty());
+
+    // assign the sub-environment call param
+    auto&& param_list = o_call_statement.at("paramList").as_array();
+    if (!param_list.empty()) {
+        for (std::size_t i = 0; i < param_list.size(); ++i) {
+            this->storeVariable(i + 1, this->getValue(param_list[i].as_object()));
+        }
+    }
+    
+    this->processStatementList(body);
+
+    // examine the flow state
+    if (this->_current_flow_state == FlowState::FLOW_STATE_NEED_RETURN) {
+        // return by the return statement
+        // consume the return flow
+        this->consumeFlowControl(o_call_statement);
+    } else {
+        // not returned by a return statement
+        auto&& return_expression = substatement.at("endsubRtnExpr").as_object();
+        if (return_expression.empty()) {
+            this->storeVariable("_value_returned", 0, true);
+        } else {
+            this->storeVariable("_value_returned", 1, true);
+            double value = this->getValue(return_expression);
+            this->storeVariable("_value", value, true);   
+        }
+    }
+
+    // reset the in-sub flag
+    this->_is_in_sub = false;
+    this->_sub_nameindex_variable_value_map.clear();
+    this->_sub_numberindex_variable_value_map.clear();
 }
 
 double Serializer::getValue(const AstObject &expression)

@@ -112,7 +112,7 @@ public:
          * 2. 初始化全局环境,如坐标系,运动模式,进给速度,等
         */
 
-        this->storeVariable("_test_global", 1001, true);
+        this->initInternalVariables();
     }
 
     inline void clear() {
@@ -130,6 +130,9 @@ public:
 
         this->_is_in_sub = false;
     }
+
+private:
+    void initInternalVariables();
 
 public:
     // Interfaces
@@ -214,6 +217,23 @@ private:
      * given `key`/`index` exists or is a global index
      * @throw If anything wrong, will throw exception, since it is a statement error 
     */
+
+    /**
+     * @brief delete a variable, if it doesn't exist, it depends on the impl definition
+     * THROW_IF_INTERNAL_DELETE_UNDEFINED_VARIABLE, if defined in the build stage
+     * this function will throw exception.
+     * @note this is an internal behaviour.
+     */
+    void deleteVariable(const std::string& index);
+    void deleteVariable(int index);
+
+    /**
+     * @brief clear a variable, set to 0
+     * This just does the same as storeVariable(index, 0, assign_internal)
+     * @param index 
+     */
+    void clearVariable(const std::string& index, bool assign_internal = false);
+    void clearVariable(int index);
 
     /**
      * @brief Store value to a name-indexed variable. Determine whether it is
@@ -331,10 +351,26 @@ private:
     void processOWhileStatement(const AstObject& o_while_statement);
 
     /**
-     * 
+     * @brief process the o-continue statement
+     * This will produce a flow_jump_statement, and set the current flow state = FLOW_STATE_NEED_CONTINUE, 
+     * to wait for a while-statement to consume this flow_jump, and set the current state to normal.
+     * It is designed that during the flow jump, no other processing should be done
     */
     void processOContinueStatement(const AstObject& o_continue_statement);
+
+    /**
+     * @brief process the o-break statement
+    */
     void processOBreakStatement(const AstObject& o_break_statement);
+
+    /**
+     * @brief process the o-sub statement
+     * 
+    */
+    void processOSubStatement(const AstObject& o_sub_statement);
+
+    void processOReturnStatement(const AstObject& o_break_statement);
+    void processOCallStatement(const AstObject& o_call_statement);
 
     /**************************/
     /*** astnode value get  ***/
@@ -447,6 +483,10 @@ private:
     // o-word set
     std::unordered_set<int> _numberindex_oword_set;
     std::unordered_set<std::string> _nameindex_oword_set;
+
+    // sub routine store
+    std::unordered_map<int, AstObject> _numberindex_o_substatement_map;
+    std::unordered_map<std::string, AstObject> _nameindex_o_substatement_map;
 
     AstObject _parse_result;
 
